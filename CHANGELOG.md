@@ -8,4 +8,6 @@ All notable changes to this project are documented here. The format follows
 
 ## [0.1.0]
 
-- First release.
+- Parse a Cache-Control header into a typed, case-insensitive `CacheControl` structure.
+- Build a header string back from a `CacheControl`, quoting and escaping arguments when needed.
+- Typed accessors for the common directives, with unknown directives preserved verbatim.
