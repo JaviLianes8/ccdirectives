@@ -32,7 +32,6 @@ Member = tuple[BareItem | list[tuple[BareItem, Params]], Params]
 _LCALPHA = frozenset("abcdefghijklmnopqrstuvwxyz")
 _KEY = _LCALPHA | DIGITS | frozenset("_-.*")
 _ALPHA = _LCALPHA | frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-_BASE64 = _ALPHA | DIGITS | frozenset("+/=")
 _HEX = frozenset("0123456789abcdef")
 
 
@@ -165,8 +164,6 @@ def _bytes(r: Reader) -> bytes:
         raise StructuredError("unterminated Byte Sequence")
     content = r.text[r.pos : end]
     r.pos = end + 1
-    if any(char not in _BASE64 for char in content):
-        raise StructuredError("a Byte Sequence is base64")
     try:
         # RFC 9651 asks parsers to accept missing padding and non-zero pad bits.
         bare = content.rstrip("=")

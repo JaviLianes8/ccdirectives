@@ -19,6 +19,7 @@ from ccdirectives import CacheControlError, parse
         ('x="a\x7fb"', "control character", 4),
         ('x="a\u0100"', "character not allowed in a quoted string", 4),
         ("max-age=1\r\n", "control character", 9),
+        ('x="a\\' + chr(0x100) + '"', "character not allowed after a backslash", 5),
         ("no-store, no-store", "repeated directive 'no-store'", 10),
         ("max-age", "'max-age' needs delta-seconds", 0),
         ("max-age=-1", "not delta-seconds", 0),

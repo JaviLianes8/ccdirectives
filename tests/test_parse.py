@@ -33,6 +33,7 @@ def test_delta_seconds_overflow_to_two_to_the_31() -> None:
     assert parse("max-age=2147483647").max_age == 2147483647
     assert parse("max-age=2147483648").max_age == DELTA_MAX
     assert parse("max-age=2147483649").max_age == DELTA_MAX
+    assert parse("max-age=9999999999")["max-age"] == DELTA_MAX
     assert parse("s-maxage=" + "9" * 5000).s_maxage == DELTA_MAX
     assert parse("max-age=000000000000000042").max_age == 42
 
@@ -105,12 +106,13 @@ def test_only_ascii_letters_fold() -> None:
     # The Kelvin sign lower-cases to "k" with Unicode rules; it is not a token character.
     assert "max-agek" not in parse("MAX-AGE" + KELVIN + "=1")
     assert parse("MAX-AGE" + KELVIN + "=1").max_age is None
+    assert "max-agek" not in CacheControl({"MAX-AGE" + KELVIN: 1})
 
 
 def test_cr_lf_and_nul_become_spaces() -> None:
     cc = parse("max-age=5\r\nSet-Cookie: a=b, no-store")
     assert cc.no_store
-    assert "\r" not in str(cc.directives) and "\n" not in str(cc.directives)
+    assert cc["max-age"] == "5  Set-Cookie: a=b"
     assert parse("no-cache\x00, public").public
 
 

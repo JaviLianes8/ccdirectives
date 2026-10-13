@@ -27,6 +27,11 @@ def test_members_map_to_directive_values() -> None:
     assert type(cc["x"]) is str
 
 
+def test_inner_list_members_need_a_separator() -> None:
+    assert parse_targeted('a=(1"x")') is None
+    assert parse_targeted('a=(1 "x"), max-age=5') is not None
+
+
 def test_parameters_are_ignored() -> None:
     cc = parse_targeted("max-age=60;a=1, no-store;b")
     assert cc is not None and cc.directives == {"max-age": 60, "no-store": True}

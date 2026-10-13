@@ -41,6 +41,8 @@ def test_current_age_uses_the_more_conservative_estimate() -> None:
         current_age(date_value=100, request_time=100, response_time=101, now=101, age_value=30)
         == 31
     )
+    # Without an Age header a large apparent age wins over the response delay.
+    assert current_age(date_value=0, request_time=100, response_time=101, now=101) == 101
     # A clock ahead of the origin cannot make the apparent age negative.
     assert current_age(date_value=200, request_time=100, response_time=100, now=100) == 0
     assert current_age(date_value=0, request_time=0, response_time=0.2, now=0.3) == 1
