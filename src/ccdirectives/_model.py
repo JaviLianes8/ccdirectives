@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import ItemsView, Iterator
 from dataclasses import dataclass, field
 
-from ._chars import DELTA_MAX, ascii_lower, field_names
+from ._chars import DELTA_MAX, ascii_lower, delta_seconds, field_names
 from ._registry import REGISTERED_DIRECTIVES, REQUEST_DIRECTIVES, RESPONSE_DIRECTIVES
 
 DirectiveValue = int | str | bool
@@ -33,6 +33,8 @@ class CacheControl:
 
     def __post_init__(self) -> None:
         normalised: dict[str, DirectiveValue] = {}
+        if not isinstance(self.directives, dict):
+            raise TypeError("directives must be a dict of name to value")
         repeated = {ascii_lower(name) for name in self.duplicates}
         for name, value in self.directives.items():
             checked = _checked(name, value)
@@ -77,6 +79,8 @@ class CacheControl:
     def seconds(self, name: str) -> int | None:
         """The delta-seconds value of ``name``, or None when absent or not a number."""
         value = self.directives.get(ascii_lower(name))
+        if isinstance(value, str):
+            return delta_seconds(value)
         if isinstance(value, bool) or not isinstance(value, int) or value < 0:
             return None
         return min(value, DELTA_MAX)

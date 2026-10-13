@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+from ._chars import field_names
 from ._model import CacheControl
 
 
@@ -64,6 +65,8 @@ def current_age(
     age_value: int = 0,
 ) -> int:
     """The current age in whole seconds, rounded up (RFC 9111 section 4.2.3)."""
+    if age_value < 0:
+        raise ValueError("age_value cannot be negative")
     apparent_age = max(0.0, response_time - date_value)
     corrected_age_value = age_value + (response_time - request_time)
     corrected_initial_age = max(apparent_age, corrected_age_value)
@@ -95,6 +98,8 @@ def assess(
     and ``max-stale`` to accept a stale response. ``stale-if-error`` in the request takes
     precedence over the response's for that request (RFC 5861 section 4).
     """
+    if isinstance(age, bool) or not isinstance(age, int):
+        raise TypeError("age is a whole number of seconds")
     if age < 0:
         raise ValueError("age cannot be negative")
     asked = request if request is not None else CacheControl()
@@ -147,7 +152,9 @@ def may_store(
             return False
     elif response.no_store:
         return False
-    if shared and response.private and not response.private_fields:
+    qualifier = response.get("private")
+    unqualified = not isinstance(qualifier, str) or field_names(qualifier) is None
+    if shared and response.private and unqualified:
         return False
     if shared and authorized:
         return response.must_revalidate or response.public or response.has("s-maxage")

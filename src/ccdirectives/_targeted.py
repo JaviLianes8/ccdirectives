@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable
 from decimal import Decimal
+from typing import Protocol, runtime_checkable
 
 from ._build import build
-from ._chars import DELTA_MAX, ascii_lower, field_names
+from ._chars import DELTA_MAX, ascii_lower, delta_seconds, field_names
 from ._errors import CacheControlError
 from ._model import CacheControl, DirectiveValue
 from ._parse import parse
@@ -20,7 +21,15 @@ _RESTRICTIVE = frozenset(
     {"no-store", "no-cache", "private", "must-revalidate", "proxy-revalidate", "no-transform"}
 )
 
-Headers = Mapping[str, str] | Iterable[tuple[str, str]]
+
+@runtime_checkable
+class HasItems(Protocol):
+    """A mapping, or a header object such as http.client.HTTPMessage that repeats names."""
+
+    def items(self) -> Iterable[tuple[str, str]]: ...
+
+
+Headers = HasItems | Iterable[tuple[str, str]]
 
 
 def parse_targeted(value: str | Iterable[str]) -> CacheControl | None:
@@ -32,6 +41,8 @@ def parse_targeted(value: str | Iterable[str]) -> CacheControl | None:
     its directive (a Decimal ``max-age``, a String ``s-maxage``) is left out, except that
     a restrictive directive such as ``no-store`` or ``private`` is kept in unqualified form.
     """
+    if isinstance(value, (bytes, bytearray)):
+        raise TypeError("decode the field value to str first")
     text = value if isinstance(value, str) else ", ".join(value)
     try:
         members = parse_dictionary(text)
@@ -83,7 +94,7 @@ def build_targeted(cache_control: CacheControl) -> str:
         if value is False:
             continue
         if isinstance(value, str) and name in DELTA_DIRECTIVES:
-            members[name] = min(int(value), DELTA_MAX)
+            members[name] = delta_seconds(value) or 0
         elif isinstance(value, str) and name not in FIELD_DIRECTIVES and is_sf_token(value):
             members[name] = Token(value)
         elif isinstance(value, int) and not isinstance(value, bool) and name in DELTA_DIRECTIVES:
@@ -105,7 +116,9 @@ def select(
     ``Cache-Control`` field is parsed. Returns the chosen field name and its directives.
     When a targeted field wins, the response's ``Expires`` no longer applies either.
     """
-    pairs = headers.items() if isinstance(headers, Mapping) else headers
+    if isinstance(targets, str):
+        raise TypeError("targets is a list of field names, not one string")
+    pairs = headers.items() if isinstance(headers, HasItems) else headers
     lines: dict[str, list[str]] = {}
     for name, value in pairs:
         lines.setdefault(ascii_lower(name), []).append(value)

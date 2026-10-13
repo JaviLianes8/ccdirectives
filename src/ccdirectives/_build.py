@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ._chars import DELTA_MAX, DIGITS, field_names, is_token
+from ._chars import DELTA_MAX, delta_seconds, field_names, is_token
 from ._errors import CacheControlError
 from ._model import CacheControl, DirectiveValue
 from ._registry import DELTA_DIRECTIVES, FIELD_DIRECTIVES, argument_rule
@@ -29,7 +29,7 @@ def build(cache_control: CacheControl) -> str:
             if rule == "delta":
                 raise CacheControlError(f"{name!r} needs delta-seconds")
             parts.append(name)
-        elif rule == "none":
+        elif rule in ("none", "ignored"):
             raise CacheControlError(f"{name!r} takes no argument")
         else:
             parts.append(f"{name}={_argument(name, value)}")
@@ -43,9 +43,10 @@ def _argument(name: str, value: DirectiveValue) -> str:
         # RFC 9111 section 1.2.2: anything past 2^31 means the same, so write the cap.
         return str(min(value, DELTA_MAX) if name in DELTA_DIRECTIVES else value)
     if name in DELTA_DIRECTIVES:
-        if not value or any(char not in DIGITS for char in value):
+        seconds = delta_seconds(value)
+        if seconds is None:
             raise CacheControlError(f"{name!r} needs delta-seconds, not {value!r}")
-        return value
+        return str(seconds)
     for char in value:
         code = ord(char)
         if code > 0x7E or (code < 0x20 and char != "\t") or code == 0x7F:

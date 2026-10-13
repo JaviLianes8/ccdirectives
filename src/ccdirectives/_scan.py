@@ -64,7 +64,8 @@ def _directive(text: str, start: int, strict: bool) -> tuple[Item | None, int]:
         return _argument(text, start, name, after + 1, strict)
     if after < len(text) and text[after] != ",":
         _fail(strict, "expected ',' after a directive", after)
-        return None, _next_comma(text, after)
+        # Keep the name: dropping "no-store" from "no-store; private" would loosen the policy.
+        return Item(name, None, start), _next_comma(text, after)
     return Item(name, None, start), after
 
 

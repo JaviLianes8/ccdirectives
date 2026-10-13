@@ -26,7 +26,11 @@ def parse(
     (RFC 9111 section 4.2.1); repeated names are listed in ``duplicates``. The lenient
     default never raises on content: what it cannot read is skipped. With ``strict=True``
     anything outside the grammar or the directive rules raises ``CacheControlError``.
-    ``context`` selects the request or the response rules for registered directives.
+    ``context`` selects the request or the response rules for registered directives; a
+    registered name of the other direction is then treated as an extension. Strict mode
+    checks what a recipient must accept, so the quoted form of delta-seconds and the token
+    form of a field list pass (RFC 9111 section 5.2). Several lines are joined with ", "
+    and error offsets point into that joined value.
     """
     if context not in (None, "request", "response"):
         raise ValueError(f"context must be 'request', 'response' or None, not {context!r}")
@@ -84,7 +88,8 @@ def _value(name: str, raw: str | None) -> DirectiveValue:
 def _check(name: str, item: Item, context: Context | None) -> None:
     rule = argument_rule(name, context)
     value = item.value
-    if rule == "none" and value is not None:
+    # RFC 8246 says immutable takes no argument; readers ignore one, a validator reports it.
+    if rule in ("none", "ignored") and value is not None:
         raise CacheControlError(f"{name!r} takes no argument", item.offset)
     if rule == "delta" and value is None:
         raise CacheControlError(f"{name!r} needs delta-seconds", item.offset)

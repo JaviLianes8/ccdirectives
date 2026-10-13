@@ -80,7 +80,7 @@ def test_each_number_reads_its_own_directive(prop: str, name: str) -> None:
 
 def test_seconds_rejects_flags_text_and_negative_numbers() -> None:
     cc = CacheControl({"a": True, "b": "5", "c": -1, "d": DELTA_MAX + 9, "e": 0})
-    assert [cc.seconds(n) for n in "abcde"] == [None, None, None, DELTA_MAX, 0]
+    assert [cc.seconds(n) for n in "abcde"] == [None, 5, None, DELTA_MAX, 0]
 
 
 def test_bare_max_stale_accepts_any_staleness() -> None:

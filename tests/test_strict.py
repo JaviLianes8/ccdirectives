@@ -44,7 +44,7 @@ def test_strict_mode_reports_the_problem_and_its_offset(
 def test_strict_mode_accepts_every_valid_form() -> None:
     header = (
         'max-age=60, max-stale, min-fresh="5", no-cache="Set-Cookie, ETag", '
-        'private, community="UCI", x-flag, immutable=whatever, ,\t, stale-if-error=0'
+        'private, community="UCI", x-flag, immutable, ,\t, stale-if-error=0'
     )
     cc = parse(header, strict=True)
     assert cc.max_age == 60 and cc.min_fresh == 5 and cc.stale_if_error == 0

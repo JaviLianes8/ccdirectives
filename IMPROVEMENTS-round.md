@@ -99,8 +99,9 @@ Probed against the sources below:
    parse; `select` walks a target list and falls back on `Cache-Control`.
 6. **Safe builder.** Refuses names that are not tokens, control characters and non-ASCII
    text, negative numbers and non-numeric delta-seconds; writes delta-seconds as tokens and
-   `no-cache` and `private` field lists as quoted strings. `parse(build(cc)) == cc` holds
-   for any valid structure.
+   `no-cache` and `private` field lists as quoted strings. `parse(build(cc), strict=True) == cc`
+   holds for any normalised structure (delta-seconds as ints up to 2^31, extension
+   arguments as text, no duplicates).
 7. **Typed API.** Registry sets (`REQUEST_DIRECTIVES`, `RESPONSE_DIRECTIVES`), field list
    accessors (`no_cache_fields`, `private_fields`), `max_stale` reading a bare directive as
    unlimited, `extensions()` for names outside the registry, frozen result types.

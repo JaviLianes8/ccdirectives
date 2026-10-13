@@ -39,7 +39,8 @@ print(parse("max-stale").max_stale, parse(["max-age=60", "public"]).public)
 
 The default parser never raises on content: what it cannot read is skipped, and a broken
 quote cannot hide the directives after it. Strict mode validates instead, with the rules
-of a request or a response when you pass `context`:
+of a request or a response when you pass `context`. It holds a header to what a recipient
+must accept, so `max-age="60"` passes although a sender should not write it:
 
 ```python
 from ccdirectives import CacheControlError, parse
@@ -114,7 +115,10 @@ $ ccdirectives --strict --age 30 "max-age=60, stale-while-revalidate=30"
 
 It reads a header value, or a response head on standard input (the last response of a
 redirect chain), and prints the chosen field, its directives and the freshness verdict as
-JSON. `--target` sets the target list; it defaults to `CDN-Cache-Control` with `--shared`.
+JSON. From a head it takes the age from `Age` and, when `Cache-Control` applies, the
+lifetime fallback from `Expires` and `Date`. `--target` sets the target list; it defaults
+to `CDN-Cache-Control` with `--shared`. The exit status is 1 for a value `--strict`
+rejects and 2 for a usage error.
 
 ## API
 

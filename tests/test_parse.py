@@ -73,8 +73,12 @@ def test_junk_after_a_quoted_argument_is_dropped() -> None:
     assert parse('community="UCI" junk, public').directives == {"community": "UCI", "public": True}
 
 
-def test_a_name_followed_by_junk_is_skipped() -> None:
-    assert list(parse("max age=5, no store, public")) == ["public"]
+def test_a_name_followed_by_junk_is_kept_bare() -> None:
+    assert parse("max age=5, no store, public").directives == {
+        "max": True,
+        "no": True,
+        "public": True,
+    }
 
 
 def test_whitespace_around_equals_is_tolerated() -> None:
@@ -100,7 +104,7 @@ KELVIN = chr(0x212A)
 def test_only_ascii_letters_fold() -> None:
     # The Kelvin sign lower-cases to "k" with Unicode rules; it is not a token character.
     assert "max-agek" not in parse("MAX-AGE" + KELVIN + "=1")
-    assert len(parse("MAX-AGE" + KELVIN + "=1")) == 0
+    assert parse("MAX-AGE" + KELVIN + "=1").max_age is None
 
 
 def test_cr_lf_and_nul_become_spaces() -> None:

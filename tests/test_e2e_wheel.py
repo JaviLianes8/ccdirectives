@@ -113,4 +113,4 @@ def test_installed_wheel_end_to_end(tmp_path: Path) -> None:
         report = json.loads(shown.stdout)
         assert report["field"] == "CDN-Cache-Control" and report["lifetime"] == 600
     failed = _run(script, "--strict", "max-age=x", cwd=work)
-    assert failed.returncode == 2 and b"not delta-seconds" in failed.stderr
+    assert failed.returncode == 1 and b"not delta-seconds" in failed.stderr

@@ -70,15 +70,15 @@ def test_a_bare_value_on_standard_input(
     assert report["reusable"] is False
 
 
-def test_strict_errors_exit_with_two(
+def test_strict_errors_exit_with_one(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     code, report, err = _run(monkeypatch, capsys, ["--strict", "max-age=x"])
-    assert code == 2 and report is None
+    assert code == 1 and report is None
     assert "not delta-seconds at offset 0" in err
     head = b"HTTP/1.1 200 OK\nCache-Control: max-age=1\nCache-Control: max-age=2\n\n"
     code, _, err = _run(monkeypatch, capsys, ["--strict"], head)
-    assert code == 2 and "repeated directive" in err
+    assert code == 1 and "repeated directive" in err
 
 
 def test_negative_age_is_a_usage_error(
