@@ -3,15 +3,15 @@
 Progress:
 - [x] Brainstorm ranked improvements (this file)
 - [x] Pin the ground truth: RFC 9111, RFC 9110, RFC 5861, RFC 8246, RFC 9213, RFC 9651, IANA registry, structured field test corpus
-- [ ] Grammar-driven parser: `#cache-directive`, delta-seconds, first occurrence wins, duplicates reported
-- [ ] Strict mode with `CacheControlError` offsets
-- [ ] Directive registry: request and response sets, argument rules
-- [ ] Safe builder: token names, header injection guard, token and quoted forms per directive
-- [ ] Freshness helpers: lifetime, age, reuse, stale-while-revalidate, stale-if-error, request limits
-- [ ] Targeted fields: structured field dictionary parser and serializer, target list selection
-- [ ] Command line
+- [x] Grammar-driven parser: `#cache-directive`, delta-seconds, first occurrence wins, duplicates reported
+- [x] Strict mode with `CacheControlError` offsets
+- [x] Directive registry: request and response sets, argument rules
+- [x] Safe builder: token names, header injection guard, token and quoted forms per directive
+- [x] Freshness helpers: lifetime, age, reuse, stale-while-revalidate, stale-if-error, request limits
+- [x] Targeted fields: structured field dictionary parser and serializer, target list selection
+- [x] Command line
 - [ ] Contracts: pinned sources, README examples, typing, installed wheel
-- [ ] Docs and packaging: README, CHANGELOG, metadata, sdist contents
+- [x] Docs and packaging: README, CHANGELOG, metadata, sdist contents
 - [ ] Gates: ruff format, ruff check, mypy --strict, pytest
 - [ ] Mutation run: removing guarded logic makes the suite fail
 - [ ] Independent review findings fixed with regression tests
