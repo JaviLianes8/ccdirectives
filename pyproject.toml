@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ccdirectives"
-version = "0.1.0"
+version = "0.2.0"
 description = "Parse and build the HTTP Cache-Control header as a typed, zero-dependency structure"
 readme = "README.md"
 requires-python = ">=3.10"

@@ -4,7 +4,25 @@ import ccdirectives
 
 # The public API. Add every exported name here as the library grows; this list is the
 # contract and the test below fails if the module and this list disagree.
-PUBLIC_API: list[str] = ["CacheControl", "DirectiveValue", "build", "parse"]
+PUBLIC_API: list[str] = [
+    "DELTA_MAX",
+    "REGISTERED_DIRECTIVES",
+    "REQUEST_DIRECTIVES",
+    "RESPONSE_DIRECTIVES",
+    "CacheControl",
+    "CacheControlError",
+    "DirectiveValue",
+    "Freshness",
+    "assess",
+    "build",
+    "build_targeted",
+    "current_age",
+    "freshness_lifetime",
+    "may_store",
+    "parse",
+    "parse_targeted",
+    "select",
+]
 
 
 def test_all_lists_exactly_the_public_api() -> None:
