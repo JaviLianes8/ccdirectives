@@ -18,20 +18,20 @@ def head_fields(text: str) -> list[tuple[str, str]] | None:
     starts = [i for i, line in enumerate(lines) if line.startswith("HTTP/")]
     if not starts:
         return None
-    fields: list[tuple[str, str]] = []
+    fields: list[tuple[str, list[str]]] = []
     for raw in lines[starts[-1] + 1 :]:
         line = raw.rstrip("\r")
         if not line:
             break
         if line[0] in " \t":
+            # Parts are joined once at the end: joining on every line would be quadratic.
             if fields:
-                name, value = fields[-1]
-                fields[-1] = (name, (value + " " + line.strip(" \t")).strip())
+                fields[-1][1].append(line.strip(" \t"))
             continue
         name, colon, value = line.partition(":")
         if colon and name and name == name.strip():
-            fields.append((name, value.strip(" \t")))
-    return fields
+            fields.append((name, [value.strip(" \t")]))
+    return [(name, " ".join(part for part in parts if part)) for name, parts in fields]
 
 
 def field(fields: list[tuple[str, str]], name: str) -> str | None:

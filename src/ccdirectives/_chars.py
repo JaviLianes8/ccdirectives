@@ -19,7 +19,7 @@ def is_token(text: str) -> bool:
 def ascii_lower(text: str) -> str:
     # str.lower() folds non-ASCII letters too (the Kelvin sign becomes "k"), which would let a
     # look-alike name match a registered directive.
-    return text.translate(_LOWER)
+    return str.translate(text, _LOWER)
 
 
 _LOWER = {code: code + 32 for code in range(ord("A"), ord("Z") + 1)}

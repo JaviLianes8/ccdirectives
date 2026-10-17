@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import re
-import shutil
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -44,15 +42,9 @@ def mypy_output(tmp_path_factory: pytest.TempPathFactory) -> str:
     config.write_text(f"[mypy]\nmypy_path = {SRC.as_posix()}\n", encoding="utf-8")
     cache = str(folder / "cache")
     args = ["--strict", "--config-file", str(config), "--cache-dir", cache, str(target)]
-    try:
-        from mypy import api
-    except ImportError:
-        # The interpreter running pytest may lack mypy while the one on PATH has it.
-        program = shutil.which("mypy")
-        if program is None:
-            pytest.skip("mypy is not installed")
-        result = subprocess.run([program, *args], capture_output=True, text=True, check=False)
-        return result.stdout + result.stderr
+    # mypy must run in this interpreter: one from elsewhere on PATH cannot see the
+    # installed package and would report every name as Any.
+    api = pytest.importorskip("mypy.api")
     out, err, _ = api.run(args)
     return str(out) + str(err)
 

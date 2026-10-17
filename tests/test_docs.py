@@ -88,3 +88,23 @@ def test_no_em_dash_anywhere_in_the_tree() -> None:
 def test_source_files_stay_under_two_hundred_lines() -> None:
     for path in [*ROOT.joinpath("src").rglob("*.py"), *ROOT.joinpath("tests").rglob("*.py")]:
         assert len(path.read_text(encoding="utf-8").splitlines()) <= 200, path
+
+
+def test_every_strict_reason_in_the_guide_is_one_the_code_raises() -> None:
+    guide = (ROOT / "GUIDE.md").read_text(encoding="utf-8")
+    table = guide.split("| Reason | When |", 1)[1].split("\n\n", 1)[0]
+    reasons = re.findall(r"^\| `([^`]+)`(?:, `([^`]+)`)? \|", table, flags=re.MULTILINE)
+    package = Path(ccdirectives.__file__).parent
+    source = "".join(p.read_text(encoding="utf-8") for p in package.rglob("*.py"))
+    found = [r for pair in reasons for r in pair if r]
+    assert len(found) == 14
+    for reason in found:
+        text = reason.replace("'NAME'", "{shown(name)}")
+        assert f'"{text}"' in source or f'f"{text}"' in source, reason
+
+
+def test_readme_and_guide_links_are_absolute() -> None:
+    for name in ("README.md", "GUIDE.md"):
+        text = (ROOT / name).read_text(encoding="utf-8")
+        for target in re.findall(r"\]\(([^)]+)\)", text):
+            assert target.startswith("https://"), (name, target)

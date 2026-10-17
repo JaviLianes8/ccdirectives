@@ -6,10 +6,12 @@ from collections.abc import Iterable
 from decimal import Decimal
 from typing import Protocol, runtime_checkable
 
+from ._access import DirectiveValue
 from ._build import build
 from ._chars import DELTA_MAX, ascii_lower, delta_seconds, field_names
+from ._checks import plain_str, type_name
 from ._errors import CacheControlError
-from ._model import CacheControl, DirectiveValue
+from ._model import CacheControl, checked_items
 from ._parse import parse
 from ._registry import DELTA_DIRECTIVES, FIELD_DIRECTIVES, argument_rule
 from ._sf import BareItem, Date, DisplayString, StructuredError, Token
@@ -40,10 +42,22 @@ def parse_targeted(value: str | Iterable[str]) -> CacheControl | None:
     directive values and parameters are ignored. A member whose value breaks the rules of
     its directive (a Decimal ``max-age``, a String ``s-maxage``) is left out, except that
     a restrictive directive such as ``no-store`` or ``private`` is kept in unqualified form.
+
+    >>> parse_targeted('max-age=600, private="Set-Cookie"').directives
+    {'max-age': 600, 'private': 'Set-Cookie'}
+    >>> parse_targeted("max-age=1.5, no-store").directives
+    {'no-store': True}
+    >>> parse_targeted("max-age=") is None
+    True
     """
-    if isinstance(value, (bytes, bytearray)):
+    if isinstance(value, (bytes, bytearray, memoryview)):
         raise TypeError("decode the field value to str first")
-    text = value if isinstance(value, str) else ", ".join(value)
+    if isinstance(value, str):
+        text = str.__str__(value)
+    elif isinstance(value, Iterable):
+        text = ", ".join([plain_str("field lines", line) for line in value])
+    else:
+        raise TypeError(f"value must be str or an iterable of str, not {type_name(value)}")
     try:
         members = parse_dictionary(text)
     except StructuredError:
@@ -87,10 +101,16 @@ def build_targeted(cache_control: CacheControl) -> str:
     Integers, other text as a Token when it is one and as a String otherwise. An empty
     result means the field should not be sent. Names that are not structured field keys
     and text a String cannot hold raise ``CacheControlError``.
+
+    >>> from ccdirectives import CacheControl
+    >>> build_targeted(CacheControl({"max-age": 600, "private": "Set-Cookie", "x": "tok"}))
+    'max-age=600, private="Set-Cookie", x=tok'
     """
+    if not isinstance(cache_control, CacheControl):
+        raise TypeError(f"build_targeted takes a CacheControl, not {type_name(cache_control)}")
     build(cache_control)
     members: dict[str, BareItem] = {}
-    for name, value in cache_control.directives.items():
+    for name, value in checked_items(cache_control):
         if value is False:
             continue
         if isinstance(value, str) and name in DELTA_DIRECTIVES:
@@ -115,14 +135,27 @@ def select(
     The first target field present with a valid, non-empty value wins; otherwise the
     ``Cache-Control`` field is parsed. Returns the chosen field name and its directives.
     When a targeted field wins, the response's ``Expires`` no longer applies either.
+
+    >>> headers = {"Cache-Control": "max-age=60", "CDN-Cache-Control": "max-age=600"}
+    >>> name, policy = select(headers)
+    >>> name, policy.max_age
+    ('CDN-Cache-Control', 600)
+    >>> select(headers, [])[1].max_age
+    60
     """
-    if isinstance(targets, str):
+    if isinstance(targets, (str, bytes)):
         raise TypeError("targets is a list of field names, not one string")
+    wanted = [plain_str("target names", target) for target in targets]
+    if isinstance(headers, (str, bytes)):
+        raise TypeError("headers is a mapping or a list of (name, value) pairs")
     pairs = headers.items() if isinstance(headers, HasItems) else headers
     lines: dict[str, list[str]] = {}
-    for name, value in pairs:
-        lines.setdefault(ascii_lower(name), []).append(value)
-    for target in targets:
+    for pair in pairs:
+        name, value = pair
+        lines.setdefault(ascii_lower(plain_str("field names", name)), []).append(
+            plain_str("field values", value)
+        )
+    for target in wanted:
         values = lines.get(ascii_lower(target))
         if values:
             chosen = parse_targeted(values)
