@@ -205,5 +205,32 @@
     "licence": "BSD-3-Clause style licence of the IETF Trust (LICENSE.md in the same repository)",
     "size": 1125,
     "sha256": "9fd251e8ac0cb3ef71533b6063affb09c6faef1cdefa9568ce8c94a0041381ef"
+  },
+  "whatwg-fetch.bs.txt": {
+    "title": "WHATWG Fetch Standard, Bikeshed source",
+    "url": "https://raw.githubusercontent.com/whatwg/fetch/e9460d1b22ead1c6a72eeac37fb2ec0dc01aeb1d/fetch.bs",
+    "revision": "whatwg/fetch commit e9460d1b22ead1c6a72eeac37fb2ec0dc01aeb1d (2026-10-06)",
+    "fetched": "2026-10-17",
+    "licence": "CC BY 4.0 (WHATWG)",
+    "size": 444131,
+    "sha256": "ffa13a962874f83fab93e10206727173ce1262e5e6725720148b8849f4092121"
+  },
+  "werkzeug-test_http.py.txt": {
+    "title": "Werkzeug 3.1.9 tests/test_http.py",
+    "url": "https://raw.githubusercontent.com/pallets/werkzeug/3.1.9/tests/test_http.py",
+    "revision": "pallets/werkzeug tag 3.1.9",
+    "fetched": "2026-10-17",
+    "licence": "BSD-3-Clause (Pallets)",
+    "size": 30638,
+    "sha256": "7a996e569a9817e43014395cbf1fccda38e9e10ba5d1f5e310fe03a3e62fb0b7"
+  },
+  "hishel-test_headers.py.txt": {
+    "title": "hishel 1.4.0 tests/_core/test_headers.py",
+    "url": "https://raw.githubusercontent.com/karpetrosyan/hishel/1.4.0/tests/_core/test_headers.py",
+    "revision": "karpetrosyan/hishel tag 1.4.0",
+    "fetched": "2026-10-17",
+    "licence": "BSD-3-Clause (hishel)",
+    "size": 21441,
+    "sha256": "cc7d406c4e59c4e1ac71e326405e17187c1231984a271857f601dad7046bd94e"
   }
 }
