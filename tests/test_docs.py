@@ -94,7 +94,8 @@ def test_every_strict_reason_in_the_guide_is_one_the_code_raises() -> None:
     guide = (ROOT / "GUIDE.md").read_text(encoding="utf-8")
     table = guide.split("| Reason | When |", 1)[1].split("\n\n", 1)[0]
     reasons = re.findall(r"^\| `([^`]+)`(?:, `([^`]+)`)? \|", table, flags=re.MULTILINE)
-    source = "".join(p.read_text(encoding="utf-8") for p in ROOT.joinpath("src").rglob("*.py"))
+    package = Path(ccdirectives.__file__).parent
+    source = "".join(p.read_text(encoding="utf-8") for p in package.rglob("*.py"))
     found = [r for pair in reasons for r in pair if r]
     assert len(found) == 14
     for reason in found:
