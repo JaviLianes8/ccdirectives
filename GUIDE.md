@@ -94,7 +94,7 @@ never loosens a policy. A repeated key keeps the last value, as Dictionaries do.
 `build_targeted(cache_control)` applies the rules of `build` and writes a Dictionary; an
 extension integer may have at most 15 digits there, the limit of a structured field
 Integer (delta-seconds are capped at 2147483648 first). A list of pairs given to
-`select` must hold pairs (`TypeError` otherwise).
+`select` must hold tuples or lists of two (`TypeError` otherwise).
 `select(headers, targets=("CDN-Cache-Control",))` takes a mapping, a header object with
 `items()` or a list of pairs, and returns the first target field with a valid, non-empty
 value, or `"Cache-Control"` parsed leniently.

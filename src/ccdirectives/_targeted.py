@@ -158,10 +158,10 @@ def select(
     pairs = headers.items() if isinstance(headers, HasItems) else headers
     lines: dict[str, list[str]] = {}
     for pair in pairs:
-        try:
-            name, value = pair
-        except (TypeError, ValueError):
-            raise TypeError("headers holds (name, value) pairs") from None
+        # A two-character string or a two-key dict would unpack too: only tuples and lists.
+        if not isinstance(pair, (tuple, list)) or len(pair) != 2:
+            raise TypeError("headers holds (name, value) pairs")
+        name, value = pair
         lines.setdefault(ascii_lower(plain_str("field names", name)), []).append(
             plain_str("field values", value)
         )

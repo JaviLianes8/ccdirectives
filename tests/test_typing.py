@@ -30,6 +30,7 @@ CacheControl({"max-age": 1.5})
 assess(CacheControl(), 1)
 parse(["max-age=1", "public"], strict=True, context="request")
 select([("Cache-Control", "no-store")])
+CacheControl().extensions("both")
 """
 
 
@@ -73,6 +74,7 @@ def test_misuse_is_rejected(mypy_output: str) -> None:
         (17, "arg-type"),
         (18, "dict-item"),
         (19, "call-arg"),
+        (22, "arg-type"),
     )
     for line, code in expected:
         assert re.search(rf"snippet\.py:{line}: error: .*\[{code}\]", mypy_output), mypy_output

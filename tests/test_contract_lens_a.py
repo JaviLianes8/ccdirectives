@@ -55,7 +55,7 @@ def test_keys_and_values_follow_header_order() -> None:
     assert dict(policy) == {"max-age": 5, "x-a": True, "private": True}
 
 
-@pytest.mark.parametrize("pair", [("a", "b", "c"), ("a",), 5])
+@pytest.mark.parametrize("pair", [("a", "b", "c"), ("a",), 5, "ab", {"a": 1, "b": 2}])
 def test_select_refuses_what_is_not_a_pair(pair: Any) -> None:
     with pytest.raises(TypeError, match=r"headers holds \(name, value\) pairs"):
         select([pair])
@@ -66,3 +66,21 @@ def test_an_integer_time_beyond_a_float_is_out_of_range() -> None:
         freshness_lifetime(parse("public"), expires=10**400, date=0)
     with pytest.raises(ValueError, match="now is out of the range of a float"):
         current_age(date_value=0, request_time=0, response_time=0, now=-(10**400))
+
+
+def test_select_takes_lists_of_two_as_pairs() -> None:
+    assert select([["CDN-Cache-Control", "max-age=9"]])[1].max_age == 9  # type: ignore[list-item]
+
+
+def test_build_targeted_caps_delta_seconds_before_the_digit_limit() -> None:
+    assert build_targeted(CacheControl({"max-age": 10**20})) == f"max-age={DELTA_MAX}"
+    assert build_targeted(CacheControl({"s-maxage": str(10**20)})) == f"s-maxage={DELTA_MAX}"
+
+
+def test_keys_and_values_are_live_views() -> None:
+    policy = parse("max-age=5")
+    keys, values = policy.keys(), policy.values()
+    policy["x-new"] = 1
+    assert len(keys) == 2 and list(keys) == list(keys) == ["max-age", "x-new"]
+    assert list(values) == [5, 1]
+    assert keys & {"x-new", "other"} == {"x-new"}

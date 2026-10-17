@@ -25,7 +25,8 @@ Results on valid input are the same as in 0.2.0.
 - `build`, `build_targeted`, `assess`, `freshness_lifetime` and `may_store` raise
   `TypeError` for an argument that is not a `CacheControl`; `select` and
   `parse_targeted` raise `TypeError` for names, values or targets that are not `str`, and
-  `select` for an item of a list that is not a (name, value) pair.
+  `select` for an item of a list that is not a (name, value) tuple or list (a
+  two-character string was read as a name and a value).
 - Values are stored as plain `int`, `str` and `bool`: a subclass can no longer change what
   `build` writes through its own methods (an `int` whose `__str__` returned a line break
   was written into the header).
