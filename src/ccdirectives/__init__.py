@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from ._access import DirectiveValue
 from ._build import build
 from ._chars import DELTA_MAX
 from ._errors import CacheControlError
 from ._fresh import Freshness, assess, current_age, freshness_lifetime, may_store
-from ._model import CacheControl, DirectiveValue
+from ._model import CacheControl
 from ._parse import parse
 from ._registry import REGISTERED_DIRECTIVES, REQUEST_DIRECTIVES, RESPONSE_DIRECTIVES
 from ._targeted import build_targeted, parse_targeted, select

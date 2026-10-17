@@ -3,10 +3,18 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
 
-from ._chars import field_names
+from ._chars import DELTA_MAX, field_names
+from ._checks import check_bool, check_seconds, check_time, type_name
 from ._model import CacheControl
+
+
+def _policy(name: str, value: object) -> CacheControl:
+    if not isinstance(value, CacheControl):
+        raise TypeError(f"{name} must be a CacheControl, not {type_name(value)}")
+    return value
 
 
 @dataclass(frozen=True)
@@ -44,16 +52,22 @@ def freshness_lifetime(
     ``s-maxage`` counts for a shared cache, then ``max-age``, then ``expires - date``
     (both in seconds since the epoch; pass the time of receipt as ``date`` when the
     response has no Date). A directive that is present but not delta-seconds gives 0, as
-    section 4.2.1 encourages treating invalid freshness information as stale.
+    section 4.2.1 encourages treating invalid freshness information as stale. The result
+    is at most 2147483648, the cap of section 1.2.2.
     """
+    _policy("response", response)
+    check_bool("shared", shared)
+    stamps = [
+        None if v is None else check_time(n, v) for n, v in (("expires", expires), ("date", date))
+    ]
     for name in ("s-maxage", "max-age") if shared else ("max-age",):
         if response.has(name):
             return response.seconds(name) or 0
-    if expires is None:
+    if stamps[0] is None:
         return None
-    if date is None:
+    if stamps[1] is None:
         raise ValueError("pass date (or the time the response was received) with expires")
-    return max(0, math.floor(expires - date))
+    return _capped(math.floor, stamps[0] - stamps[1])
 
 
 def current_age(
@@ -65,12 +79,24 @@ def current_age(
     age_value: int = 0,
 ) -> int:
     """The current age in whole seconds, rounded up (RFC 9111 section 4.2.3)."""
-    if age_value < 0:
-        raise ValueError("age_value cannot be negative")
+    # An Age beyond 2^31 means the same as 2^31 (RFC 9111 section 1.2.2).
+    age_value = min(check_seconds("age_value", age_value), DELTA_MAX)
+    date_value = check_time("date_value", date_value)
+    request_time = check_time("request_time", request_time)
+    response_time = check_time("response_time", response_time)
+    now = check_time("now", now)
     apparent_age = max(0.0, response_time - date_value)
     corrected_age_value = age_value + (response_time - request_time)
     corrected_initial_age = max(apparent_age, corrected_age_value)
-    return max(0, math.ceil(corrected_initial_age + (now - response_time)))
+    return _capped(math.ceil, corrected_initial_age + (now - response_time))
+
+
+def _capped(rounding: Callable[[float], int], seconds: float) -> int:
+    # Section 1.2.2: a calculation that overflows (here past 2^31, or to inf or NaN between
+    # extreme finite times) is taken as 2^31.
+    if not seconds < DELTA_MAX:
+        return DELTA_MAX
+    return max(0, rounding(seconds))
 
 
 def _stale_forbidden(response: CacheControl, shared: bool) -> bool:
@@ -98,11 +124,9 @@ def assess(
     and ``max-stale`` to accept a stale response. ``stale-if-error`` in the request takes
     precedence over the response's for that request (RFC 5861 section 4).
     """
-    if isinstance(age, bool) or not isinstance(age, int):
-        raise TypeError("age is a whole number of seconds")
-    if age < 0:
-        raise ValueError("age cannot be negative")
-    asked = request if request is not None else CacheControl()
+    age = check_seconds("age", age)
+    _policy("response", response)
+    asked = CacheControl() if request is None else _policy("request", request)
     lifetime = freshness_lifetime(response, shared=shared, expires=expires, date=date)
     fresh = lifetime is not None and lifetime > age
     staleness = max(0, age - (lifetime or 0))
@@ -147,6 +171,10 @@ def may_store(
     ``private`` still allows a shared cache to store the response without those fields.
     Only directives are judged: method, status and freshness rules stay with the caller.
     """
+    _policy("response", response)
+    for flag, value in (("shared", shared), ("authorized", authorized)):
+        check_bool(flag, value)
+    check_bool("understood_status", understood_status)
     if response.must_understand:
         if not understood_status:
             return False
