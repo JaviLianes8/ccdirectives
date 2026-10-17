@@ -136,7 +136,8 @@ def main() -> int:
         **oracles(values),
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(record, indent=0, sort_keys=True) + "\n", encoding="utf-8")
+    text = json.dumps(record, indent=0, sort_keys=True) + "\n"
+    OUT.write_text(text, encoding="utf-8", newline="\n")
     print(f"wrote {len(values)} cases to {OUT}")
     return 0
 

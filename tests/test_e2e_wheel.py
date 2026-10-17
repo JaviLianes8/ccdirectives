@@ -85,7 +85,8 @@ def test_installed_wheel_end_to_end(tmp_path: Path) -> None:
     text = zipfile.ZipFile(wheel).read(entry_points).decode()
     assert "ccdirectives = ccdirectives._cli:main" in text
     listing = _run(sys.executable, "-m", "tarfile", "-l", sdist).stdout.decode()
-    assert "IMPROVEMENTS-round" not in listing
+    assert "IMPROVEMENTS-round" not in listing and "CERT-1.0-REPORT" not in listing
+    assert "GUIDE.md" in listing and "tests/fixtures/oracle_runs.json" in listing
     assert "tests/upstream/MANIFEST.json" in listing
     assert ".txt" not in listing.replace("requirements-dev.txt", "")
     assert ".csv" not in listing and "upstream/sf" not in listing
