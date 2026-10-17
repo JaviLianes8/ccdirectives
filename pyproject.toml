@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ccdirectives"
-version = "0.2.0"
+version = "1.0.0"
 description = "Parse, validate and build HTTP Cache-Control and CDN-Cache-Control, and decide freshness, typed and zero-dependency"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -13,7 +13,7 @@ license-files = ["LICENSE"]
 authors = [{ name = "Javier Lianes", email = "javier@lianes8studio.com" }]
 keywords = ["cache-control", "cdn-cache-control", "http", "caching", "rfc9111", "rfc9213", "rfc5861", "freshness", "headers"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
@@ -31,14 +31,24 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
-dev = ["ruff", "mypy", "pytest", "build", "twine"]
+dev = [
+    "ruff",
+    "mypy",
+    "pytest",
+    "pytest-timeout",
+    "build",
+    "twine",
+    "werkzeug==3.1.9",
+    "hishel==1.4.0",
+    "CacheControl==0.14.4",
+]
 
 [project.scripts]
 ccdirectives = "ccdirectives._cli:main"
 
 [project.urls]
 Homepage = "https://lianes8studio.com"
-Repository = "https://github.com/JaviLianes8/ccdirectives"
+Source = "https://github.com/JaviLianes8/ccdirectives"
 Issues = "https://github.com/JaviLianes8/ccdirectives/issues"
 Changelog = "https://github.com/JaviLianes8/ccdirectives/blob/main/CHANGELOG.md"
 LinkedIn = "https://www.linkedin.com/in/jlianes/"
@@ -48,14 +58,21 @@ Funding = "https://buymeacoffee.com/jlianesglrs"
 packages = ["src/ccdirectives"]
 
 [tool.hatch.build.targets.sdist]
+# An explicit list, so a local virtual environment or scratch file is never packed.
 # Third-party reference files are fetched locally and never shipped; only their manifest is.
-exclude = [
-    ".github",
-    "IMPROVEMENTS-round*.md",
-    "tests/upstream/*.txt",
-    "tests/upstream/*.csv",
-    "tests/upstream/sf",
+only-include = [
+    "src",
+    "tests",
+    "scripts/fetch_upstream.py",
+    "scripts/oracle_fixture.py",
+    "README.md",
+    "GUIDE.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "LICENSE",
+    "requirements-dev.txt",
 ]
+exclude = ["tests/upstream/*.txt", "tests/upstream/*.csv", "tests/upstream/*.html", "tests/upstream/sf", "__pycache__"]
 
 [tool.ruff]
 line-length = 100
@@ -72,3 +89,4 @@ strict = true
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "-q"
+timeout = 300

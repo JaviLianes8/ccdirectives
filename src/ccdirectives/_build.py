@@ -22,6 +22,12 @@ def build(cache_control: CacheControl) -> str:
     Names that are not tokens, negative numbers, non-numeric or missing delta-seconds,
     arguments on registered directives that take none, control characters and non-ASCII
     text raise ``CacheControlError``, so the output always passes ``parse(strict=True)``.
+
+    >>> from ccdirectives import CacheControl
+    >>> build(CacheControl({"max-age": 3600, "private": "Set-Cookie", "public": False}))
+    'max-age=3600, private="Set-Cookie"'
+    >>> build(CacheControl({"x-note": "two words", "max-age": "0060"}))
+    'x-note="two words", max-age=60'
     """
     if not isinstance(cache_control, CacheControl):
         raise TypeError(f"build takes a CacheControl, not {type_name(cache_control)}")

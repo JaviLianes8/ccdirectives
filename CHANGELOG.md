@@ -6,6 +6,41 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-17
+
+The public API is now stable: the seventeen names in `__all__`, their signatures and
+defaults, the error types and the command line options are kept for the 1.x series.
+Results on valid input are the same as in 0.2.0.
+
+### Changed
+
+- `strict`, `shared`, `authorized` and `understood_status` must be `bool`; any other
+  value raises `TypeError` instead of being read by its truth value.
+- Directive names must be `str` in every `CacheControl` method (`get`, `has`, `seconds`,
+  item access and deletion), raising `TypeError` instead of `AttributeError`.
+- `build`, `build_targeted`, `assess`, `freshness_lifetime` and `may_store` raise
+  `TypeError` for an argument that is not a `CacheControl`; `select` and
+  `parse_targeted` raise `TypeError` for names, values or targets that are not `str`.
+- Values are stored as plain `int`, `str` and `bool`: a subclass can no longer change what
+  `build` writes through its own methods (an `int` whose `__str__` returned a line break
+  was written into the header).
+- Times passed to `current_age` and `freshness_lifetime` must be finite numbers
+  (`ValueError` for NaN and infinities, `TypeError` for `bool`, strings and other types);
+  `age_value` must be an `int`. A calculation that overflows, and any lifetime or age past
+  2147483648, is 2147483648, as RFC 9111 section 1.2.2 says.
+- Error messages show at most 40 characters of a directive name and never a directive
+  value or an unknown `context`; type names in messages are cut to 40 characters.
+- `build` raises `CacheControlError` for an extension integer too large to write instead of
+  the interpreter's `ValueError`.
+- `CacheControl(duplicates=...)` takes any iterable of names but refuses a string.
+- Public names report `ccdirectives` as their module; `CacheControlError` pickles with its
+  `reason` and `offset`; the stray `annotations` attribute is gone from the package.
+- Command line: `--age` takes ASCII digits only (no sign, underscore or other digits);
+  on POSIX an argument is read as the octets it was given, like standard input; a closed
+  output exits 1 without a traceback, an interrupt exits 130, a closed standard input is a
+  usage error; folded header lines are joined in linear time.
+- The sdist is built from an explicit list of files.
+
 ## [0.2.0]
 
 ### Added

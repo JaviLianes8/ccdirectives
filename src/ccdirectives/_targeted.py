@@ -42,6 +42,13 @@ def parse_targeted(value: str | Iterable[str]) -> CacheControl | None:
     directive values and parameters are ignored. A member whose value breaks the rules of
     its directive (a Decimal ``max-age``, a String ``s-maxage``) is left out, except that
     a restrictive directive such as ``no-store`` or ``private`` is kept in unqualified form.
+
+    >>> parse_targeted('max-age=600, private="Set-Cookie"').directives
+    {'max-age': 600, 'private': 'Set-Cookie'}
+    >>> parse_targeted("max-age=1.5, no-store").directives
+    {'no-store': True}
+    >>> parse_targeted("max-age=") is None
+    True
     """
     if isinstance(value, (bytes, bytearray, memoryview)):
         raise TypeError("decode the field value to str first")
@@ -94,6 +101,10 @@ def build_targeted(cache_control: CacheControl) -> str:
     Integers, other text as a Token when it is one and as a String otherwise. An empty
     result means the field should not be sent. Names that are not structured field keys
     and text a String cannot hold raise ``CacheControlError``.
+
+    >>> from ccdirectives import CacheControl
+    >>> build_targeted(CacheControl({"max-age": 600, "private": "Set-Cookie", "x": "tok"}))
+    'max-age=600, private="Set-Cookie", x=tok'
     """
     if not isinstance(cache_control, CacheControl):
         raise TypeError(f"build_targeted takes a CacheControl, not {type_name(cache_control)}")
@@ -124,6 +135,13 @@ def select(
     The first target field present with a valid, non-empty value wins; otherwise the
     ``Cache-Control`` field is parsed. Returns the chosen field name and its directives.
     When a targeted field wins, the response's ``Expires`` no longer applies either.
+
+    >>> headers = {"Cache-Control": "max-age=60", "CDN-Cache-Control": "max-age=600"}
+    >>> name, policy = select(headers)
+    >>> name, policy.max_age
+    ('CDN-Cache-Control', 600)
+    >>> select(headers, [])[1].max_age
+    60
     """
     if isinstance(targets, (str, bytes)):
         raise TypeError("targets is a list of field names, not one string")

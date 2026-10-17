@@ -34,6 +34,16 @@ def parse(
     checks what a recipient must accept, so the quoted form of delta-seconds and the token
     form of a field list pass (RFC 9111 section 5.2). Several lines are joined with ", "
     and error offsets point into that joined value.
+
+    >>> cc = parse('max-age=600, no-cache="Set-Cookie", MAX-AGE=5')
+    >>> cc.max_age, cc.no_cache_fields, sorted(cc.duplicates)
+    (600, ('set-cookie',), ['max-age'])
+    >>> parse(["max-age=60", "x-ext"]).extensions()
+    ('x-ext',)
+    >>> parse("max-age=60, no-store=1", strict=True, context="response")
+    Traceback (most recent call last):
+    ...
+    ccdirectives.CacheControlError: 'no-store' takes no argument at offset 12
     """
     check_bool("strict", strict)
     if context is not None and not (isinstance(context, str) and context in _CONTEXTS):
