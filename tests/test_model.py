@@ -104,4 +104,4 @@ def test_extensions_depend_on_the_direction() -> None:
     assert cc.extensions("request") == ("public", "x-vendor")
     assert cc.extensions("response") == ("max-stale", "x-vendor")
     with pytest.raises(ValueError, match="context"):
-        cc.extensions("both")
+        cc.extensions("both")  # type: ignore[arg-type]

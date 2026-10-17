@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from ._chars import DELTA_MAX, ascii_lower, delta_seconds, field_names
 from ._checks import plain_str
 from ._registry import REGISTERED_DIRECTIVES, REQUEST_DIRECTIVES, RESPONSE_DIRECTIVES
@@ -33,7 +35,7 @@ class Accessors:
             return None
         return min(value, DELTA_MAX)
 
-    def extensions(self, context: str | None = None) -> tuple[str, ...]:
+    def extensions(self, context: Literal["request", "response"] | None = None) -> tuple[str, ...]:
         """Names outside the registry, or outside its request or response set."""
         known = {"request": REQUEST_DIRECTIVES, "response": RESPONSE_DIRECTIVES}
         if context is not None and not (isinstance(context, str) and context in known):

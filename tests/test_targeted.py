@@ -105,7 +105,7 @@ def test_build_targeted_round_trips() -> None:
         ({"x!": True}, "not a structured field key"),
         ({"9x": True}, "not a structured field key"),
         ({"max-age": True}, "needs delta-seconds"),
-        ({"x": 10**16}, "at most 15 digits"),
+        ({"x": 10**16}, "more than 15 digits"),
         ({"x": "a\tb"}, "visible ASCII"),
     ],
 )

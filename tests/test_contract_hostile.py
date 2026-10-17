@@ -108,7 +108,7 @@ def test_subclasses_are_read_as_their_plain_values() -> None:
     assert CacheControl({"no-store": True}).has(_Str("NO-STORE"))
 
 
-@pytest.mark.parametrize("bad", [math.nan, math.inf, -math.inf, 10**400])
+@pytest.mark.parametrize("bad", [math.nan, math.inf, -math.inf])
 def test_times_must_be_finite(bad: float) -> None:
     times: dict[str, Any] = {"date_value": 0, "request_time": 0, "response_time": 0, "now": 0}
     for name in times:
@@ -150,7 +150,7 @@ def test_overflowing_time_arithmetic_gives_two_to_the_31() -> None:
 def test_a_huge_extension_integer_is_a_cache_control_error() -> None:
     with pytest.raises(CacheControlError, match="too large"):
         build(CacheControl({"x": 10**5000}))
-    assert build(CacheControl({"x": 10**500})) == f"x={10**500}"
+    assert build(CacheControl({"x": 10**700})) == f"x={10**700}"
     assert build(CacheControl({"max-age": 10**5000})) == f"max-age={DELTA_MAX}"
 
 

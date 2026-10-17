@@ -54,7 +54,7 @@ def check_time(name: str, value: object) -> float:
     try:
         finite = math.isfinite(number)
     except OverflowError:
-        finite = False
+        raise ValueError(f"{name} is out of the range of a float") from None
     if not finite:
         raise ValueError(f"{name} must be finite")
     return number

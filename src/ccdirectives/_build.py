@@ -9,9 +9,6 @@ from ._errors import CacheControlError
 from ._model import CacheControl, checked_items
 from ._registry import DELTA_DIRECTIVES, FIELD_DIRECTIVES, argument_rule
 
-# About 600 digits: under the smallest limit Python allows on int to str conversion (640).
-_MAX_BITS = 2000
-
 
 def build(cache_control: CacheControl) -> str:
     """Render a CacheControl as a field value, refusing anything the grammar cannot carry.
@@ -56,9 +53,11 @@ def _argument(name: str, value: DirectiveValue) -> str:
         # RFC 9111 section 1.2.2: anything past 2^31 means the same, so write the cap.
         if name in DELTA_DIRECTIVES:
             return str(min(value, DELTA_MAX))
-        if value.bit_length() > _MAX_BITS:
-            raise CacheControlError(f"{shown(name)} argument is too large to write")
-        return str(value)
+        try:
+            return str(value)
+        except ValueError:
+            # Past the interpreter's limit on int to str conversion (4300 digits by default).
+            raise CacheControlError(f"{shown(name)} argument is too large to write") from None
     if name in DELTA_DIRECTIVES:
         seconds = delta_seconds(value)
         if seconds is None:

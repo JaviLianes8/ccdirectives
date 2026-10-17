@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ._chars import field_names
+from ._chars import DELTA_MAX, field_names
 from ._checks import check_bool, check_seconds
 from ._lifetime import current_age, freshness_lifetime, policy
 from ._model import CacheControl
@@ -72,7 +72,8 @@ def assess(
     >>> assess(response, age=620, request=parse("max-stale=60")).reusable
     True
     """
-    age = check_seconds("age", age)
+    # An age past 2^31 means the same as 2^31 (RFC 9111 section 1.2.2).
+    age = min(check_seconds("age", age), DELTA_MAX)
     policy("response", response)
     asked = CacheControl() if request is None else policy("request", request)
     lifetime = freshness_lifetime(response, shared=shared, expires=expires, date=date)

@@ -60,9 +60,10 @@ def test_the_verdict_keeps_its_invariants() -> None:
         age = rng.choice([0, 1, 30, 59, 60, 61, 89, 90, 119, 120, 121, 200, 10**12])
         verdict = assess(response, age=age, shared=shared, request=request)
         lifetime = freshness_lifetime(response, shared=shared)
-        assert verdict.lifetime == lifetime and verdict.age == age
+        assert verdict.lifetime == lifetime and verdict.age == min(age, DELTA_MAX)
         assert verdict.fresh == (lifetime is not None and lifetime > age)
-        assert verdict.staleness == (0 if verdict.fresh else age - (lifetime or 0))
+        capped = min(age, DELTA_MAX)
+        assert verdict.staleness == (0 if verdict.fresh else capped - (lifetime or 0))
         if verdict.reusable:
             assert not response.no_cache and not request.no_cache
             assert verdict.fresh or request.max_stale is not None

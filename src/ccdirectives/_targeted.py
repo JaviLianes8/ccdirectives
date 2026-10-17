@@ -9,7 +9,7 @@ from typing import Protocol, runtime_checkable
 from ._access import DirectiveValue
 from ._build import build
 from ._chars import DELTA_MAX, ascii_lower, delta_seconds, field_names
-from ._checks import plain_str, type_name
+from ._checks import plain_str, shown, type_name
 from ._errors import CacheControlError
 from ._model import CacheControl, checked_items
 from ._parse import parse
@@ -22,6 +22,10 @@ from ._sfdict import is_sf_token, parse_dictionary, serialize_dictionary
 _RESTRICTIVE = frozenset(
     {"no-store", "no-cache", "private", "must-revalidate", "proxy-revalidate", "no-transform"}
 )
+
+
+# A structured field Integer has at most 15 digits (RFC 9651 section 3.3.1).
+_SF_INT_MAX = 999_999_999_999_999
 
 
 @runtime_checkable
@@ -97,8 +101,9 @@ def _map(key: str, item: BareItem) -> DirectiveValue | None:
 def build_targeted(cache_control: CacheControl) -> str:
     """Serialize a CacheControl as a targeted field value (a structured field Dictionary).
 
-    The directive rules of ``build`` apply. Field lists are written as Strings, numbers as
-    Integers, other text as a Token when it is one and as a String otherwise. An empty
+    The directive rules of ``build`` apply, and an extension integer may have at most 15
+    digits (the limit of a structured field Integer). Field lists are written as Strings,
+    numbers as Integers, other text as a Token when it is one and as a String otherwise. An empty
     result means the field should not be sent. Names that are not structured field keys
     and text a String cannot hold raise ``CacheControlError``.
 
@@ -119,6 +124,8 @@ def build_targeted(cache_control: CacheControl) -> str:
             members[name] = Token(value)
         elif isinstance(value, int) and not isinstance(value, bool) and name in DELTA_DIRECTIVES:
             members[name] = min(value, DELTA_MAX)
+        elif isinstance(value, int) and not isinstance(value, bool) and value > _SF_INT_MAX:
+            raise CacheControlError(f"{shown(name)} argument has more than 15 digits")
         else:
             members[name] = value
     try:
@@ -151,7 +158,10 @@ def select(
     pairs = headers.items() if isinstance(headers, HasItems) else headers
     lines: dict[str, list[str]] = {}
     for pair in pairs:
-        name, value = pair
+        try:
+            name, value = pair
+        except (TypeError, ValueError):
+            raise TypeError("headers holds (name, value) pairs") from None
         lines.setdefault(ascii_lower(plain_str("field names", name)), []).append(
             plain_str("field values", value)
         )

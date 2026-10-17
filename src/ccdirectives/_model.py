@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import ItemsView, Iterable, Iterator
+from collections.abc import ItemsView, Iterable, Iterator, KeysView, ValuesView
 from dataclasses import dataclass, field
 
 from ._access import Accessors, DirectiveValue, key
@@ -93,3 +93,11 @@ class CacheControl(Accessors):
     def items(self) -> ItemsView[str, DirectiveValue]:
         """The (name, value) pairs in header order."""
         return self.directives.items()
+
+    def keys(self) -> KeysView[str]:
+        """The names in header order."""
+        return self.directives.keys()
+
+    def values(self) -> ValuesView[DirectiveValue]:
+        """The values in header order."""
+        return self.directives.values()

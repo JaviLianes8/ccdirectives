@@ -53,9 +53,11 @@ them, but a recipient has to read them.
 `DirectiveValue` (`int`, `str` or `bool`). Construction lower-cases the ASCII letters of
 every name, keeps the first of two names that fold together and adds it to
 `duplicates`, and stores plain `int`, `str` and `bool` values (subclasses are converted, so
-their methods cannot change what `build` writes). `False` means absent.
+their methods cannot change what `build` writes). `False` means absent. Two structures
+are equal when they hold the same names, values and duplicates, in any order.
 
-- Item access, `in`, `len`, iteration, `get`, `items`, assignment and `del` ignore case.
+- Item access, `in`, `len`, iteration, `get`, `keys`, `values`, `items`, assignment and
+  `del` ignore case; `dict(cc)` copies the directives.
 - `has(name)` is true for any value but `False`; `seconds(name)` reads delta-seconds.
 - `extensions(context=None)` lists the names outside the registry, or outside the request
   or response set.
@@ -64,8 +66,8 @@ their methods cannot change what `build` writes). `False` means absent.
   `only_if_cached`, `must_revalidate`, `proxy_revalidate`, `must_understand`, `public`,
   `immutable` (`bool`); `no_cache_fields`, `private_fields` (lower-cased names).
 
-Names must be `str` everywhere (`TypeError` otherwise); values of another type raise
-`TypeError`.
+Names must be `str` (`TypeError` otherwise), except that `in` answers False for anything
+that is not a `str`; values of another type raise `TypeError`.
 
 ## Writing a field: `build`
 
@@ -75,7 +77,8 @@ dropped), `no-cache` and `private` lists as quoted strings, other text as a toke
 is one and quoted otherwise. It raises `CacheControlError` for a name that is not a token,
 a negative number, a missing or non-numeric delta-seconds, an argument on a registered
 directive that takes none, a control character or non-ASCII text, a field list that is
-not one, and an extension integer of more than about 600 digits. Messages show at most 40
+not one, and an extension integer too large for the interpreter to write as text (past
+4300 digits by default). Messages show at most 40
 characters of the name and never the value.
 
 ## Targeted fields
@@ -88,7 +91,10 @@ ignored; a member that breaks its directive's rules (a Decimal `max-age`, a Stri
 `private`, `must-revalidate`, `proxy-revalidate`, `no-transform`) is kept bare so a cache
 never loosens a policy. A repeated key keeps the last value, as Dictionaries do.
 
-`build_targeted(cache_control)` applies the rules of `build` and writes a Dictionary.
+`build_targeted(cache_control)` applies the rules of `build` and writes a Dictionary; an
+extension integer may have at most 15 digits there, the limit of a structured field
+Integer (delta-seconds are capped at 2147483648 first). A list of pairs given to
+`select` must hold pairs (`TypeError` otherwise).
 `select(headers, targets=("CDN-Cache-Control",))` takes a mapping, a header object with
 `items()` or a list of pairs, and returns the first target field with a valid, non-empty
 value, or `"Cache-Control"` parsed leniently.
@@ -107,9 +113,11 @@ value, or `"Cache-Control"` parsed leniently.
 - `may_store(response, *, shared=False, authorized=False, understood_status=False)`
   judges the directives only (RFC 9111 sections 3 and 3.5).
 
-Times must be finite `int` or `float` values (`ValueError` for NaN and infinities,
-`TypeError` for `bool` and other types); ages are non-negative `int`. Every lifetime and
-age is at most 2147483648, and a calculation that overflows gives 2147483648. The flags
+Times must be finite `int` or `float` values (`ValueError` for NaN, infinities and an
+`int` beyond the range of a float, `TypeError` for `bool` and other types); ages are
+non-negative `int`. An `age` or `age_value` past 2147483648 is read as 2147483648 before
+any calculation, every lifetime and age returned is at most 2147483648, and a
+calculation that overflows gives 2147483648. The flags
 must be `bool`. `response` and `request` must be `CacheControl` (`TypeError`).
 
 ## Command line
@@ -119,7 +127,11 @@ the chosen field, its directives and the verdict as JSON (ASCII only). Without V
 reads standard input as octets (ISO-8859-1): a response head (the last one of a `curl -sI`
 dump) or a bare value. From a head it takes `Age`, and `Expires` and `Date` when
 `Cache-Control` applies; an `Expires` that does not parse means already expired. On POSIX
-an argument is read as the octets it was given, like standard input.
+an argument is read as the octets it was given, like standard input. `--strict` checks a
+response head with the response rules; a VALUE or a bare value on standard input has no
+known direction, so it is checked with the more permissive rule of the two (a request
+directive with an argument it never takes, such as `only-if-cached=1`, is still refused
+there, while a head treats it as a response extension).
 
 Exit status: 0 printed, 1 rejected by `--strict` or an output that closed or failed, 2 a
 usage error (including a `--age` that is not ASCII digits and a closed standard input),
