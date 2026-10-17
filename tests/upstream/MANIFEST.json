@@ -56,11 +56,11 @@
   "cache-directives.csv": {
     "title": "IANA HTTP Cache Directive Registry (CSV)",
     "url": "https://www.iana.org/assignments/http-cache-directives/cache-directives.csv",
-    "revision": "registry last updated 2022-06-08; the file changes when the registry does",
-    "fetched": "2026-10-13",
+    "revision": "registry as served on 2026-10-17 (same sixteen names as on 2026-10-13; the references now read 'RFC 9111' instead of 'RFC9111'); the file changes when the registry does",
+    "fetched": "2026-10-17",
     "licence": "IANA protocol registry data, dedicated to the public domain (https://www.iana.org/help/licensing-terms)",
-    "size": 708,
-    "sha256": "62affde104ecefcf60944c41325c4e430dfee610e8e01ee066425a82ea3bf970"
+    "size": 724,
+    "sha256": "faef0d2f3315a0b6f4a3c4a209f60819cdf3c723d54dbbbb21f5ab6268c3bdf6"
   },
   "sf/binary.json": {
     "title": "Structured field test corpus, binary.json",
