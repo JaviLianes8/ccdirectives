@@ -40,7 +40,8 @@ under Fixed.
   (so with skewed clocks such an `age_value` can give a different age than in 0.2.0); a
   calculation that overflows, and any lifetime or age past 2147483648, is 2147483648, as
   RFC 9111 section 1.2.2 says. The time arithmetic is exact (ints and floats are mixed
-  without rounding), so huge ints next to floats no longer raise `OverflowError`.
+  without rounding), so huge ints next to floats no longer raise `OverflowError`; where
+  float rounding used to cross a whole second the result is now the exact one.
 - Error messages show at most 40 characters of a directive name and never a directive
   value or an unknown `context`; type names in messages are cut to 40 characters.
 - `build` raises `CacheControlError` for an extension integer past the interpreter's limit
