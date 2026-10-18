@@ -61,8 +61,10 @@ def assess(
     ``must-revalidate``, and for shared caches ``proxy-revalidate`` and ``s-maxage``);
     a ``no-cache`` response is never reusable without validation, qualified or not. The
     optional request directives narrow reuse: ``no-cache``, ``max-age``, ``min-fresh``,
-    and ``max-stale`` to accept a stale response. ``stale-if-error`` in the request takes
-    precedence over the response's for that request (RFC 5861 section 4).
+    and ``max-stale`` to accept a stale response (``min-fresh`` only judges a fresh one).
+    ``stale-if-error`` in the request is read as replacing the response's for that
+    request: RFC 5861 section 4 scopes it to the request, the precedence is this
+    library's reading.
 
     >>> from ccdirectives import parse
     >>> response = parse("max-age=600, stale-while-revalidate=30")
@@ -117,8 +119,11 @@ def may_store(
     ``authorized`` is True when the request carried Authorization; ``understood_status``
     when the cache implements the caching rules of the response's status code, which is
     what ``must-understand`` asks for and what lets it override ``no-store``. A qualified
-    ``private`` still allows a shared cache to store the response without those fields.
-    Only directives are judged: method, status and freshness rules stay with the caller.
+    ``private`` (one or more field names) still allows a shared cache to store the
+    response without those fields; an empty list counts as unqualified. Only the refusals
+    are judged (``no-store``, ``private``, ``must-understand``, Authorization): the
+    method, the status and the last condition of section 3 (a lifetime, ``public`` or a
+    cacheable status) stay with the caller.
 
     >>> from ccdirectives import parse
     >>> may_store(parse("private, max-age=60"), shared=True), may_store(parse("private"))
@@ -136,7 +141,8 @@ def may_store(
     elif response.no_store:
         return False
     qualifier = response.get("private")
-    unqualified = not isinstance(qualifier, str) or field_names(qualifier) is None
+    # RFC 9111 section 5.2.2.7: only a list of one or more field names qualifies private.
+    unqualified = not isinstance(qualifier, str) or not field_names(qualifier)
     if shared and response.private and unqualified:
         return False
     if shared and authorized:

@@ -24,12 +24,13 @@ The lenient default never raises on content. CR, LF and NUL become spaces (RFC 9
 section 5.5), an unterminated quoted string keeps the directives after it, and a name
 followed by junk is kept bare, so `no-store; private` still says `no-store`.
 
-`strict=True` checks what a recipient must accept and raises `CacheControlError` at the
+`strict=True` checks what a recipient must accept (with one exception: it reports an
+argument on `immutable`, which RFC 8246 says to ignore) and raises `CacheControlError` at the
 first problem, with the offset into the (joined) value. `context="request"` or
 `"response"` applies the argument rules of that direction; a registered name of the other
 direction is then an extension. Without a context the more permissive rule of the two is
 used. Strict mode accepts `max-age="60"` and `no-cache=ETag`: a sender must not write
-them, but a recipient has to read them.
+the first and should not write the second, but a recipient has to read both.
 
 | Reason | When |
 | --- | --- |
@@ -88,8 +89,10 @@ Dictionary (RFC 9651) and returns None for an empty or invalid field, which RFC 
 to ignore. Booleans, Integers, Strings and Tokens map to directive values; parameters are
 ignored; a member that breaks its directive's rules (a Decimal `max-age`, a String
 `s-maxage`) is left out, except that a restrictive directive (`no-store`, `no-cache`,
-`private`, `must-revalidate`, `proxy-revalidate`, `no-transform`) is kept bare so a cache
-never loosens a policy. A repeated key keeps the last value, as Dictionaries do.
+`private`, `must-revalidate`, `proxy-revalidate`, `no-transform`, and `s-maxage`, which
+forbids stale use in a shared cache) is kept bare so a cache never loosens a policy; a
+bare `s-maxage` gives a shared cache a lifetime of 0, as an invalid one does in
+`Cache-Control`. A repeated key keeps the last value, as Dictionaries do.
 
 `build_targeted(cache_control)` applies the rules of `build` and writes a Dictionary; an
 extension integer may have at most 15 digits there, the limit of a structured field
@@ -109,9 +112,17 @@ value, or `"Cache-Control"` parsed leniently.
 - `assess(response, *, age, shared=False, request=None, expires=None, date=None)` returns
   `Freshness(lifetime, age, fresh, reusable, stale_while_revalidate, stale_if_error)` and
   its `staleness`. A `no-cache` response, qualified or not, is never reusable without
-  validation; this is stricter than a cache that strips the listed fields.
+  validation; this is stricter than a cache that strips the listed fields. `min-fresh`
+  only judges a fresh response; a stale one is judged by `max-stale`. A request
+  `stale-if-error` replaces the response's for that request (RFC 5861 section 4 scopes
+  it to the request; the precedence is this library's reading).
 - `may_store(response, *, shared=False, authorized=False, understood_status=False)`
-  judges the directives only (RFC 9111 sections 3 and 3.5).
+  judges the refusals of RFC 9111 sections 3 and 3.5: `no-store` (unless
+  `must-understand` with a status the cache understands), unqualified `private` for a
+  shared cache (an empty list counts as unqualified, as section 5.2.2.7 qualifies it only
+  with one or more field names), and Authorization for a shared cache. The method, the
+  status and the last condition of section 3 (an explicit lifetime, `public`, `private`,
+  an extension or a heuristically cacheable status) stay with the caller.
 
 Times must be finite `int` or `float` values (`ValueError` for NaN, infinities and an
 `int` beyond the range of a float, `TypeError` for `bool` and other types); ages are
@@ -149,6 +160,13 @@ and extension, on hishel's freshness lifetime and stale rule, with these differe
 - CacheControl reads a bare `max-stale` as None and splits the value at every comma, so
   a quoted list is not read as one.
 - hishel and Werkzeug keep the last of a repeated directive; this library keeps the first.
+
+Those headers are lower case, without repeats, in token form and under 2^31 - 1. On other
+input the libraries also differ in these ways: CacheControl keeps the last of a repeated
+directive, ignores quoted delta-seconds (`max-age="60"`), does not cap large values and
+does not match upper-case names; hishel keeps every occurrence of a repeated extension;
+Werkzeug keeps the case of names. This library folds names to lower case, reads both
+argument forms and caps at 2147483648.
 
 `tests/test_examples.py` runs every assertion of hishel's own parser tests against this
 library with those differences, plus Werkzeug's Cache-Control test and the two values the

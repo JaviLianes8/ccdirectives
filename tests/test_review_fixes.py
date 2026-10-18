@@ -57,8 +57,8 @@ def test_digit_strings_are_delta_seconds_everywhere() -> None:
     assert build_targeted(huge) == f"max-age={DELTA_MAX}"
 
 
-def test_an_empty_private_list_is_qualified() -> None:
-    assert may_store(parse('private=""'), shared=True)
+def test_an_empty_private_list_is_unqualified() -> None:
+    assert not may_store(parse('private=""'), shared=True)
     assert not may_store(parse('private="a b"'), shared=True)
 
 

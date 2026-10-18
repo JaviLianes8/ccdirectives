@@ -21,6 +21,8 @@ from ._sfdict import is_sf_token, parse_dictionary, serialize_dictionary
 # reuse what the origin meant to restrict, so the directive is kept in its unqualified form.
 _RESTRICTIVE = frozenset(
     {"no-store", "no-cache", "private", "must-revalidate", "proxy-revalidate", "no-transform"}
+    # s-maxage also forbids stale use in a shared cache (RFC 9111 section 5.2.2.10).
+    | {"s-maxage"}
 )
 
 

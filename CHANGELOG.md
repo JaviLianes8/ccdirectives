@@ -54,6 +54,15 @@ Results on valid input are the same as in 0.2.0.
   usage error; folded header lines are joined in linear time.
 - The sdist is built from an explicit list of files.
 
+### Fixed
+
+- `may_store` treats `private` with an empty list (`private=""`, `private=`) as
+  unqualified, so a shared cache does not store the response: RFC 9111 section 5.2.2.7
+  qualifies `private` only with one or more field names.
+- `parse_targeted` keeps an invalid `s-maxage` bare instead of dropping it, so a shared
+  cache gets a lifetime of 0 and no stale use, as with an invalid value in
+  `Cache-Control`.
+
 ## [0.2.0]
 
 ### Added
