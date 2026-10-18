@@ -62,6 +62,9 @@ def write(text: str) -> None:
         if isinstance(error, BrokenPipeError) or error.errno == errno.EINVAL:
             raise OutputClosed from error
         raise OutputFailed(error.errno) from error
+    except ValueError as error:
+        # A stream object closed in this process (sys.stdout.close()) or detached.
+        raise OutputClosed from error
 
 
 def silence_stdout() -> None:

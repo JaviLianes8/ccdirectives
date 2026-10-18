@@ -56,7 +56,8 @@ under Fixed.
   gone from the package.
 - Command line: `--age` takes ASCII digits only (no sign, underscore or other digits);
   on POSIX an argument is read as the octets it was given, like standard input; a closed
-  output exits 1 without a traceback, an interrupt exits 130, a closed standard input is a
+  output (also a stream object closed in the calling process) exits 1 without a traceback,
+  an interrupt exits 130, a closed standard input is a
   usage error; folded header lines are joined in linear time.
 - The sdist is built from an explicit list of files.
 
