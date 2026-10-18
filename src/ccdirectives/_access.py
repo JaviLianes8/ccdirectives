@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Literal
 
 from ._chars import DELTA_MAX, ascii_lower, delta_seconds, field_names
-from ._checks import plain_str
+from ._checks import is_a, plain_int, plain_str
 from ._registry import REGISTERED_DIRECTIVES, REQUEST_DIRECTIVES, RESPONSE_DIRECTIVES
 
 DirectiveValue = int | str | bool
@@ -24,28 +24,30 @@ class Accessors:
 
     def has(self, name: str) -> bool:
         """True when ``name`` is present with any value other than ``False``."""
-        return self.directives.get(key(name), False) is not False
+        return dict.get(self.directives, key(name), False) is not False
 
     def seconds(self, name: str) -> int | None:
         """The delta-seconds value of ``name``, or None when absent or not a number."""
-        value = self.directives.get(key(name))
-        if isinstance(value, str):
-            return delta_seconds(value)
-        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        # Plain reads: a value set directly in ``directives`` may be a hostile subclass.
+        value = dict.get(self.directives, key(name))
+        if is_a(value, str):
+            return delta_seconds(str.__str__(value))
+        if is_a(value, bool) or not is_a(value, int):
             return None
-        return min(value, DELTA_MAX)
+        number = plain_int(value)
+        return None if number < 0 else min(number, DELTA_MAX)
 
     def extensions(self, context: Literal["request", "response"] | None = None) -> tuple[str, ...]:
         """Names outside the registry, or outside its request or response set."""
         known = {"request": REQUEST_DIRECTIVES, "response": RESPONSE_DIRECTIVES}
-        if context is not None and not (isinstance(context, str) and context in known):
+        if context is not None and not (is_a(context, str) and str.__str__(context) in known):
             raise ValueError("context must be 'request', 'response' or None")
-        registry = known[context] if context else REGISTERED_DIRECTIVES
-        return tuple(name for name in self.directives if name not in registry)
+        registry = known[str.__str__(context)] if context is not None else REGISTERED_DIRECTIVES
+        return tuple(name for name in dict.keys(self.directives) if name not in registry)
 
     def _fields(self, name: str) -> tuple[str, ...]:
-        value = self.directives.get(name)
-        return (field_names(value) or ()) if isinstance(value, str) else ()
+        value = dict.get(self.directives, name)
+        return (field_names(str.__str__(value)) or ()) if is_a(value, str) else ()
 
     @property
     def max_age(self) -> int | None:
@@ -62,7 +64,7 @@ class Accessors:
     @property
     def max_stale(self) -> int | None:
         """Seconds of staleness accepted; a bare ``max-stale`` accepts any, read as 2^31."""
-        if self.directives.get("max-stale") is True:
+        if dict.get(self.directives, "max-stale") is True:
             return DELTA_MAX
         return self.seconds("max-stale")
 

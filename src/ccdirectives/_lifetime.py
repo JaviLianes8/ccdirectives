@@ -4,14 +4,15 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable
+from fractions import Fraction
 
 from ._chars import DELTA_MAX
-from ._checks import check_bool, check_seconds, check_time, type_name
+from ._checks import check_bool, check_seconds, check_time, is_a, type_name
 from ._model import CacheControl
 
 
 def policy(name: str, value: object) -> CacheControl:
-    if not isinstance(value, CacheControl):
+    if not is_a(value, CacheControl):
         raise TypeError(f"{name} must be a CacheControl, not {type_name(value)}")
     return value
 
@@ -51,7 +52,7 @@ def freshness_lifetime(
         return None
     if stamps[1] is None:
         raise ValueError("pass date (or the time the response was received) with expires")
-    return _capped(math.floor, stamps[0] - stamps[1])
+    return _capped(math.floor, Fraction(stamps[0]) - Fraction(stamps[1]))
 
 
 def current_age(
@@ -76,15 +77,16 @@ def current_age(
     request_time = check_time("request_time", request_time)
     response_time = check_time("response_time", response_time)
     now = check_time("now", now)
-    apparent_age = max(0.0, response_time - date_value)
-    corrected_age_value = age_value + (response_time - request_time)
+    # Fractions hold ints and floats exactly: mixing them can neither overflow nor round.
+    date, sent, received = Fraction(date_value), Fraction(request_time), Fraction(response_time)
+    apparent_age = max(Fraction(0), received - date)
+    corrected_age_value = age_value + (received - sent)
     corrected_initial_age = max(apparent_age, corrected_age_value)
-    return _capped(math.ceil, corrected_initial_age + (now - response_time))
+    return _capped(math.ceil, corrected_initial_age + (Fraction(now) - received))
 
 
-def _capped(rounding: Callable[[float], int], seconds: float) -> int:
-    # Section 1.2.2: a calculation that overflows (here past 2^31, or to inf or NaN between
-    # extreme finite times) is taken as 2^31.
+def _capped(rounding: Callable[[Fraction], int], seconds: Fraction) -> int:
+    # Section 1.2.2: a calculation that overflows (here, anything past 2^31) is taken as 2^31.
     if not seconds < DELTA_MAX:
         return DELTA_MAX
     return 0 if seconds <= 0 else rounding(seconds)

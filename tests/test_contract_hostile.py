@@ -136,7 +136,8 @@ def test_overflowing_time_arithmetic_gives_two_to_the_31() -> None:
     assert freshness_lifetime(CacheControl(), expires=big, date=-big) == DELTA_MAX
     assert freshness_lifetime(CacheControl(), expires=2**80, date=0) == DELTA_MAX
     assert freshness_lifetime(CacheControl(), expires=-big, date=big) == 0
-    assert current_age(date_value=0, request_time=-big, response_time=big, now=-big) == DELTA_MAX
+    # Exact arithmetic: the infinite terms of a float calculation cancel to the true age, 0.
+    assert current_age(date_value=0, request_time=-big, response_time=big, now=-big) == 0
     assert (
         current_age(date_value=0, request_time=0, response_time=0, now=0, age_value=10**400)
         == DELTA_MAX

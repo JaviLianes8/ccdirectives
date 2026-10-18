@@ -3,6 +3,12 @@
 from __future__ import annotations
 
 import math
+from typing import TYPE_CHECKING, TypeVar, overload
+
+if TYPE_CHECKING:
+    from typing_extensions import TypeIs
+
+T = TypeVar("T")
 
 _SHOWN = 40
 # The slot of type itself: a metaclass property named __name__ cannot replace what it reads.
@@ -23,16 +29,25 @@ def shown(text: str) -> str:
     return repr(plain[:_SHOWN]) + "..."
 
 
+@overload
+def is_a(value: object, kind: type[T]) -> TypeIs[T]: ...
+@overload
+def is_a(value: object, kind: tuple[type, ...]) -> bool: ...
+def is_a(value: object, kind: type | tuple[type, ...]) -> bool:
+    """``isinstance`` by the real type: a ``__class__`` property cannot fake it."""
+    return issubclass(type(value), kind)
+
+
 def check_bool(name: str, value: object) -> bool:
     """``value`` when it is a real bool; any other truth value is refused."""
-    if not isinstance(value, bool):
+    if not is_a(value, bool):
         raise TypeError(f"{name} must be a bool, got {type_name(value)}")
     return value
 
 
 def plain_str(name: str, value: object) -> str:
     """``value`` as a plain str, so a subclass cannot steer the result through its methods."""
-    if not isinstance(value, str):
+    if not is_a(value, str):
         raise TypeError(f"{name} must be str, not {type_name(value)}")
     return str.__str__(value)
 
@@ -48,9 +63,9 @@ def check_time(name: str, value: object) -> float:
     An int stays an int so the arithmetic is exact; one beyond the range of a float is
     refused like an infinity, since it cannot be mixed with float times.
     """
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
+    if is_a(value, bool) or not (is_a(value, int) or is_a(value, float)):
         raise TypeError(f"{name} must be an int or a float, got {type_name(value)}")
-    number = float.__float__(value) if isinstance(value, float) else plain_int(value)
+    number = float.__float__(value) if is_a(value, float) else plain_int(value)
     try:
         finite = math.isfinite(number)
     except OverflowError:
@@ -62,7 +77,7 @@ def check_time(name: str, value: object) -> float:
 
 def check_seconds(name: str, value: object) -> int:
     """A whole, non-negative number of seconds as a plain int."""
-    if isinstance(value, bool) or not isinstance(value, int):
+    if is_a(value, bool) or not is_a(value, int):
         raise TypeError(f"{name} must be an int, got {type_name(value)}")
     seconds = plain_int(value)
     if seconds < 0:

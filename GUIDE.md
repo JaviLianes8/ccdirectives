@@ -67,7 +67,10 @@ are equal when they hold the same names, values and duplicates, in any order.
   `only_if_cached`, `must_revalidate`, `proxy_revalidate`, `must_understand`, `public`,
   `immutable` (`bool`); `no_cache_fields`, `private_fields` (lower-cased names).
 
-Names must be `str` (`TypeError` otherwise), except that `in` answers False for anything
+Types are checked on the real type of a value, so an object whose `__class__` claims
+another type is refused, and values placed directly in `directives` are read as plain
+values. A missing name raises `KeyError` with the name cut to 40 characters. Names must
+be `str` (`TypeError` otherwise), except that `in` answers False for anything
 that is not a `str`; values of another type raise `TypeError`.
 
 ## Writing a field: `build`
@@ -128,7 +131,8 @@ Times must be finite `int` or `float` values (`ValueError` for NaN, infinities a
 `int` beyond the range of a float, `TypeError` for `bool` and other types); ages are
 non-negative `int`. An `age` or `age_value` past 2147483648 is read as 2147483648 before
 any calculation, every lifetime and age returned is at most 2147483648, and a
-calculation that overflows gives 2147483648. The flags
+calculation that overflows gives 2147483648. The arithmetic is exact: ints and floats are
+combined without rounding. The flags
 must be `bool`. `response` and `request` must be `CacheControl` (`TypeError`).
 
 ## Command line

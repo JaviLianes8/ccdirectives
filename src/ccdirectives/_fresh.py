@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ._chars import DELTA_MAX, field_names
-from ._checks import check_bool, check_seconds
+from ._checks import check_bool, check_seconds, is_a
 from ._lifetime import current_age, freshness_lifetime, policy
 from ._model import CacheControl
 
@@ -142,7 +142,7 @@ def may_store(
         return False
     qualifier = response.get("private")
     # RFC 9111 section 5.2.2.7: only a list of one or more field names qualifies private.
-    unqualified = not isinstance(qualifier, str) or not field_names(qualifier)
+    unqualified = not is_a(qualifier, str) or not field_names(str.__str__(qualifier))
     if shared and response.private and unqualified:
         return False
     if shared and authorized:

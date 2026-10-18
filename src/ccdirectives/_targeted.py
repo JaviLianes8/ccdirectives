@@ -9,7 +9,7 @@ from typing import Protocol, runtime_checkable
 from ._access import DirectiveValue
 from ._build import build
 from ._chars import DELTA_MAX, ascii_lower, delta_seconds, field_names
-from ._checks import plain_str, shown, type_name
+from ._checks import is_a, plain_str, shown, type_name
 from ._errors import CacheControlError
 from ._model import CacheControl, checked_items
 from ._parse import parse
@@ -56,11 +56,11 @@ def parse_targeted(value: str | Iterable[str]) -> CacheControl | None:
     >>> parse_targeted("max-age=") is None
     True
     """
-    if isinstance(value, (bytes, bytearray, memoryview)):
+    if is_a(value, (bytes, bytearray, memoryview)):
         raise TypeError("decode the field value to str first")
-    if isinstance(value, str):
+    if is_a(value, str):
         text = str.__str__(value)
-    elif isinstance(value, Iterable):
+    elif issubclass(type(value), Iterable):
         text = ", ".join([plain_str("field lines", line) for line in value])
     else:
         raise TypeError(f"value must be str or an iterable of str, not {type_name(value)}")
@@ -72,7 +72,7 @@ def parse_targeted(value: str | Iterable[str]) -> CacheControl | None:
         return None
     directives: dict[str, DirectiveValue] = {}
     for key, (item, _params) in members.items():
-        mapped = _map(key, item) if not isinstance(item, list) else None
+        mapped = _map(key, item) if not is_a(item, list) else None
         if mapped is None and key in _RESTRICTIVE:
             mapped = True
         if mapped is not None:
@@ -89,15 +89,15 @@ def _map(key: str, item: BareItem) -> DirectiveValue | None:
     if item is True:
         return None if rule == "delta" else True
     if rule == "delta":
-        return min(item, DELTA_MAX) if isinstance(item, int) and item >= 0 else None
+        return min(item, DELTA_MAX) if is_a(item, int) and item >= 0 else None
     if rule == "none":
         return None
     if rule == "fields":
-        quoted = isinstance(item, str) and not isinstance(item, Token)
+        quoted = is_a(item, str) and not is_a(item, Token)
         return str(item) if quoted and field_names(str(item)) is not None else None
-    if isinstance(item, Decimal):
+    if is_a(item, Decimal):
         return str(item)
-    return str(item) if isinstance(item, str) else item
+    return str(item) if is_a(item, str) else item
 
 
 def build_targeted(cache_control: CacheControl) -> str:
@@ -113,20 +113,20 @@ def build_targeted(cache_control: CacheControl) -> str:
     >>> build_targeted(CacheControl({"max-age": 600, "private": "Set-Cookie", "x": "tok"}))
     'max-age=600, private="Set-Cookie", x=tok'
     """
-    if not isinstance(cache_control, CacheControl):
+    if not is_a(cache_control, CacheControl):
         raise TypeError(f"build_targeted takes a CacheControl, not {type_name(cache_control)}")
     build(cache_control)
     members: dict[str, BareItem] = {}
     for name, value in checked_items(cache_control):
         if value is False:
             continue
-        if isinstance(value, str) and name in DELTA_DIRECTIVES:
+        if is_a(value, str) and name in DELTA_DIRECTIVES:
             members[name] = delta_seconds(value) or 0
-        elif isinstance(value, str) and name not in FIELD_DIRECTIVES and is_sf_token(value):
+        elif is_a(value, str) and name not in FIELD_DIRECTIVES and is_sf_token(value):
             members[name] = Token(value)
-        elif isinstance(value, int) and not isinstance(value, bool) and name in DELTA_DIRECTIVES:
+        elif is_a(value, int) and not is_a(value, bool) and name in DELTA_DIRECTIVES:
             members[name] = min(value, DELTA_MAX)
-        elif isinstance(value, int) and not isinstance(value, bool) and value > _SF_INT_MAX:
+        elif is_a(value, int) and not is_a(value, bool) and value > _SF_INT_MAX:
             raise CacheControlError(f"{shown(name)} argument has more than 15 digits")
         else:
             members[name] = value
@@ -152,18 +152,24 @@ def select(
     >>> select(headers, [])[1].max_age
     60
     """
-    if isinstance(targets, (str, bytes)):
+    if is_a(targets, (str, bytes)):
         raise TypeError("targets is a list of field names, not one string")
     wanted = [plain_str("target names", target) for target in targets]
-    if isinstance(headers, (str, bytes)):
+    if is_a(headers, (str, bytes)):
         raise TypeError("headers is a mapping or a list of (name, value) pairs")
     pairs = headers.items() if isinstance(headers, HasItems) else headers
     lines: dict[str, list[str]] = {}
     for pair in pairs:
         # A two-character string or a two-key dict would unpack too: only tuples and lists.
-        if not isinstance(pair, (tuple, list)) or len(pair) != 2:
+        if is_a(pair, tuple):
+            items: tuple[object, ...] | list[object] = tuple.__getitem__(pair, slice(None))
+        elif is_a(pair, list):
+            items = list.__getitem__(pair, slice(None))
+        else:
+            items = ()
+        if len(items) != 2:
             raise TypeError("headers holds (name, value) pairs")
-        name, value = pair
+        name, value = items
         lines.setdefault(ascii_lower(plain_str("field names", name)), []).append(
             plain_str("field values", value)
         )

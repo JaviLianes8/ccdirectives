@@ -7,7 +7,7 @@ from typing import Literal
 
 from ._access import DirectiveValue
 from ._chars import ascii_lower, delta_seconds, field_names
-from ._checks import check_bool, plain_str, shown
+from ._checks import check_bool, is_a, plain_str, shown
 from ._errors import CacheControlError
 from ._model import CacheControl
 from ._registry import DELTA_DIRECTIVES, argument_rule
@@ -46,8 +46,10 @@ def parse(
     ccdirectives.CacheControlError: 'no-store' takes no argument at offset 12
     """
     check_bool("strict", strict)
-    if context is not None and not (isinstance(context, str) and context in _CONTEXTS):
+    if context is not None and not (is_a(context, str) and str.__str__(context) in _CONTEXTS):
         raise ValueError("context must be 'request', 'response' or None")
+    if context is not None:
+        context = "request" if str.__str__(context) == "request" else "response"
     text = _join(header)
     if strict:
         _refuse_controls(text)
@@ -70,11 +72,11 @@ def parse(
 
 
 def _join(header: str | Iterable[str]) -> str:
-    if isinstance(header, str):
+    if is_a(header, str):
         return str.__str__(header)
-    if isinstance(header, (bytes, bytearray, memoryview)):
+    if is_a(header, (bytes, bytearray, memoryview)):
         raise TypeError("decode the header value to str first (ISO-8859-1 keeps every octet)")
-    if not isinstance(header, Iterable):
+    if not issubclass(type(header), Iterable):
         raise TypeError("header must be str or an iterable of str")
     lines = [plain_str("field lines", line) for line in header]
     # RFC 9110 section 5.3: field lines combine into one value separated by commas.

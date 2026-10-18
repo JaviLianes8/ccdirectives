@@ -30,14 +30,17 @@ under Fixed.
   two-character string was read as a name and a value).
 - Values are stored as plain `int`, `str` and `bool`: a subclass can no longer change what
   `build` writes through its own methods (an `int` whose `__str__` returned a line break
-  was written into the header).
+  was written into the header). Types are checked on the real type, so an object whose
+  `__class__` claims to be `bool`, `int` or `str` is refused, and values set directly in
+  `directives` (even in a `dict` subclass) are read as plain values.
 - Times passed to `current_age` and `freshness_lifetime` must be finite numbers
   (`ValueError` for NaN, infinities and an `int` beyond the range of a float, `TypeError`
   for `bool`, strings and other types); `age_value` must be an `int`. An `age` given to
   `assess` or an `age_value` past 2147483648 is read as 2147483648 before the calculation
   (so with skewed clocks such an `age_value` can give a different age than in 0.2.0); a
   calculation that overflows, and any lifetime or age past 2147483648, is 2147483648, as
-  RFC 9111 section 1.2.2 says.
+  RFC 9111 section 1.2.2 says. The time arithmetic is exact (ints and floats are mixed
+  without rounding), so huge ints next to floats no longer raise `OverflowError`.
 - Error messages show at most 40 characters of a directive name and never a directive
   value or an unknown `context`; type names in messages are cut to 40 characters.
 - `build` raises `CacheControlError` for an extension integer past the interpreter's limit
@@ -46,7 +49,8 @@ under Fixed.
   names the directive (it was refused before, without the name).
 - `CacheControl.extensions` types `context` as `"request"`, `"response"` or None, like
   `parse`; other values still raise `ValueError` at run time.
-- `CacheControl(duplicates=...)` takes any iterable of names but refuses a string.
+- `CacheControl(duplicates=...)` takes any iterable of names but refuses a string. A
+  missing name raises `KeyError` with the name cut to 40 characters.
 - Public names report `ccdirectives` as their module; the stray `annotations` attribute is
   gone from the package.
 - Command line: `--age` takes ASCII digits only (no sign, underscore or other digits);

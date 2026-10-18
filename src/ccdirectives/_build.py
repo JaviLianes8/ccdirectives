@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from ._access import DirectiveValue
 from ._chars import DELTA_MAX, delta_seconds, field_names, is_token
-from ._checks import shown, type_name
+from ._checks import is_a, shown, type_name
 from ._errors import CacheControlError
 from ._model import CacheControl, checked_items
 from ._registry import DELTA_DIRECTIVES, FIELD_DIRECTIVES, argument_rule
@@ -26,7 +26,7 @@ def build(cache_control: CacheControl) -> str:
     >>> build(CacheControl({"x-note": "two words", "max-age": "0060"}))
     'x-note="two words", max-age=60'
     """
-    if not isinstance(cache_control, CacheControl):
+    if not is_a(cache_control, CacheControl):
         raise TypeError(f"build takes a CacheControl, not {type_name(cache_control)}")
     parts: list[str] = []
     for name, value in checked_items(cache_control):
