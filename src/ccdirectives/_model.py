@@ -100,17 +100,33 @@ class CacheControl(Accessors):
         return dict.__len__(self.directives)
 
     def get(self, name: str, default: DirectiveValue | None = None) -> DirectiveValue | None:
-        """The value of ``name``, or ``default`` when it is absent."""
+        """The value of ``name``, or ``default`` when it is absent.
+
+        >>> CacheControl({"max-age": 60}).get("Max-Age"), CacheControl().get("public", False)
+        (60, False)
+        """
         return dict.get(self.directives, key(name), default)
 
     def items(self) -> ItemsView[str, DirectiveValue]:
-        """The (name, value) pairs in header order."""
+        """The (name, value) pairs in header order.
+
+        >>> list(CacheControl({"no-store": True, "Max-Age": 0}).items())
+        [('no-store', True), ('max-age', 0)]
+        """
         return dict.items(self.directives)
 
     def keys(self) -> KeysView[str]:
-        """The names in header order."""
+        """The names in header order.
+
+        >>> list(CacheControl({"Private": "ETag", "max-age": 5}).keys())
+        ['private', 'max-age']
+        """
         return dict.keys(self.directives)
 
     def values(self) -> ValuesView[DirectiveValue]:
-        """The values in header order."""
+        """The values in header order.
+
+        >>> list(CacheControl({"private": "ETag", "max-age": 5}).values())
+        ['ETag', 5]
+        """
         return dict.values(self.directives)

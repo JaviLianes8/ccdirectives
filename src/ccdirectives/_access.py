@@ -23,11 +23,22 @@ class Accessors:
     directives: dict[str, DirectiveValue]
 
     def has(self, name: str) -> bool:
-        """True when ``name`` is present with any value other than ``False``."""
+        """True when ``name`` is present with any value other than ``False``.
+
+        >>> from ccdirectives import parse
+        >>> parse('no-cache=""').has("No-Cache"), parse("public").has("private")
+        (True, False)
+        """
         return dict.get(self.directives, key(name), False) is not False
 
     def seconds(self, name: str) -> int | None:
-        """The delta-seconds value of ``name``, or None when absent or not a number."""
+        """The delta-seconds value of ``name``, or None when absent or not a number.
+
+        >>> from ccdirectives import parse
+        >>> cc = parse('max-age="0060", x-ttl=30, s-maxage=soon')
+        >>> cc.seconds("max-age"), cc.seconds("x-ttl"), cc.seconds("s-maxage")
+        (60, 30, None)
+        """
         # Plain reads: a value set directly in ``directives`` may be a hostile subclass.
         value = dict.get(self.directives, key(name))
         if is_a(value, str):
@@ -38,7 +49,13 @@ class Accessors:
         return None if number < 0 else min(number, DELTA_MAX)
 
     def extensions(self, context: Literal["request", "response"] | None = None) -> tuple[str, ...]:
-        """Names outside the registry, or outside its request or response set."""
+        """Names outside the registry, or outside its request or response set.
+
+        >>> from ccdirectives import parse
+        >>> cc = parse("max-age=5, min-fresh=1, x-a")
+        >>> cc.extensions(), cc.extensions("response")
+        (('x-a',), ('min-fresh', 'x-a'))
+        """
         known = {"request": REQUEST_DIRECTIVES, "response": RESPONSE_DIRECTIVES}
         if context is not None and not (is_a(context, str) and str.__str__(context) in known):
             raise ValueError("context must be 'request', 'response' or None")

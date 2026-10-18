@@ -114,6 +114,17 @@ def test_every_public_name_has_a_passing_example() -> None:
     assert runner.tries > 40
 
 
+def test_every_public_method_has_a_passing_example() -> None:
+    finder = doctest.DocTestFinder(recurse=False)
+    runner = doctest.DocTestRunner()
+    for name in ("get", "items", "keys", "values", "has", "seconds", "extensions"):
+        method = getattr(CacheControl, name)
+        tests = finder.find(method, f"CacheControl.{name}", globs=dict(vars(cc)))
+        assert tests and tests[0].examples, name
+        runner.run(tests[0])
+    assert runner.failures == 0 and runner.tries >= 10
+
+
 def test_errors_and_values_survive_pickling() -> None:
     for protocol in range(pickle.HIGHEST_PROTOCOL + 1):
         error = pickle.loads(pickle.dumps(CacheControlError("bad", 7), protocol))
