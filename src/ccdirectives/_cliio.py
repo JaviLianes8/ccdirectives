@@ -2,10 +2,18 @@
 
 from __future__ import annotations
 
+import argparse
 import contextlib
 import errno
 import os
 import sys
+from typing import TYPE_CHECKING, NoReturn
+
+if TYPE_CHECKING:
+    from _typeshed import SupportsWrite
+
+# Usage errors are cut here: argparse repeats an unrecognized argument whole.
+USAGE_LIMIT = 200
 
 
 class OutputClosed(Exception):
@@ -42,12 +50,17 @@ def octets(arg: str) -> str:
 def report(message: str) -> None:
     """Print a message on standard error, or drop it when standard error is closed.
 
-    With standard error closed, print() would fall back to nothing useful, and a message
-    must never be mixed into the data on standard output.
+    A message is never moved to standard output, where it would mix with the data.
     """
+    to_stderr(f"ccdirectives: {message}\n")
+
+
+def to_stderr(text: str) -> None:
+    """Write ``text`` to standard error and flush it; nothing happens when it is closed."""
     if sys.stderr is not None:
         with contextlib.suppress(OSError, ValueError):
-            print(f"ccdirectives: {message}", file=sys.stderr)
+            sys.stderr.write(text)
+            sys.stderr.flush()
 
 
 def write(text: str) -> None:
@@ -76,3 +89,20 @@ def silence_stdout() -> None:
             os.dup2(null, target)
         finally:
             os.close(null)
+
+
+class Parser(argparse.ArgumentParser):
+    """argparse with bounded usage errors, and help that follows the rules of the output.
+
+    Help goes through ``write``, so a closed or failing standard output ends the program
+    like the report does; usage errors never echo more than ``USAGE_LIMIT`` characters.
+    """
+
+    def print_help(self, file: SupportsWrite[str] | None = None) -> None:
+        write(self.format_help().removesuffix("\n"))
+
+    def error(self, message: str) -> NoReturn:
+        if len(message) > USAGE_LIMIT:
+            message = message[:USAGE_LIMIT] + "..."
+        to_stderr(f"{self.format_usage()}{self.prog}: error: {message}\n")
+        raise SystemExit(2)

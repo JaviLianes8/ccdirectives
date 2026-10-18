@@ -9,7 +9,16 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from ._chars import ascii_lower, delta_seconds
-from ._cliio import OutputClosed, OutputFailed, octets, read_input, report, silence_stdout, write
+from ._cliio import (
+    OutputClosed,
+    OutputFailed,
+    Parser,
+    octets,
+    read_input,
+    report,
+    silence_stdout,
+    write,
+)
 from ._errors import CacheControlError
 from ._fresh import assess
 from ._head import age_of, field, head_fields, http_date
@@ -77,8 +86,8 @@ def _age(text: str) -> int:
     return seconds
 
 
-def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
+def _parser() -> Parser:
+    parser = Parser(
         prog="ccdirectives",
         description="Show the cache policy of a Cache-Control value, or of a response head "
         "read from standard input (for example the output of curl -sI). Exit status 1 "
@@ -122,13 +131,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     closes early, 2 for a usage error and 130 when interrupted.
     """
     parser = _parser()
-    args = parser.parse_args(argv)
-    if argv is None:
-        if args.value is not None:
-            args.value = octets(args.value)
-        args.target = [octets(target) for target in args.target or []]
-    clock = _Clock(args.age or 0, args.shared)
     try:
+        # Inside the handlers: --help writes to standard output like the report does.
+        args = parser.parse_args(argv)
+        if argv is None:
+            if args.value is not None:
+                args.value = octets(args.value)
+            args.target = [octets(target) for target in args.target or []]
+        clock = _Clock(args.age or 0, args.shared)
         chosen = _policy(args, clock)
         if chosen is None:
             parser.error("no VALUE given and standard input is closed")

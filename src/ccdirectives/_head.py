@@ -52,6 +52,7 @@ def http_date(value: str | None) -> float | None:
         return None
     try:
         parsed = email.utils.parsedate_to_datetime(value)
-    except (TypeError, ValueError, IndexError):
+    except (TypeError, ValueError, IndexError, OverflowError):
+        # OverflowError: a year or an offset too large for a date, which is no HTTP-date either.
         return None
     return parsed.timestamp() if parsed.tzinfo is not None else None
