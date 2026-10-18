@@ -10,7 +10,8 @@ All notable changes to this project are documented here. The format follows
 
 The public API is now stable: the seventeen names in `__all__`, their signatures and
 defaults, the error types and the command line options are kept for the 1.x series.
-Results on valid input are the same as in 0.2.0.
+Results on valid input are the same as in 0.2.0, except for the two corrections listed
+under Fixed.
 
 ### Added
 

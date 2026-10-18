@@ -86,6 +86,8 @@ changed = {
     "module": c.parse.__module__,
     "annotations": hasattr(c, "annotations"),
     "age_underscore": age.returncode,
+    "empty_private": c.may_store(c.parse('private=""'), shared=True),
+    "bad_s_maxage": outcome(lambda: c.parse_targeted("s-maxage=1.5")),
 }
 print(json.dumps({"version": c.__version__, "results": results, "cli": cli, "changed": changed}))
 """
@@ -127,6 +129,8 @@ def test_upgrade_from_pypi_0_2_0_keeps_every_result(tmp_path: Path) -> None:
         "module": "ccdirectives._parse",
         "annotations": True,
         "age_underscore": 0,
+        "empty_private": True,
+        "bad_s_maxage": ["ok", "CacheControl(directives={}, duplicates=frozenset())"],
     }
     assert new["changed"] == {
         "strict_string": ["TypeError"],
@@ -140,4 +144,9 @@ def test_upgrade_from_pypi_0_2_0_keeps_every_result(tmp_path: Path) -> None:
         "module": "ccdirectives",
         "annotations": False,
         "age_underscore": 2,
+        "empty_private": False,
+        "bad_s_maxage": [
+            "ok",
+            "CacheControl(directives={'s-maxage': True}, duplicates=frozenset())",
+        ],
     }
