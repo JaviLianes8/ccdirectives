@@ -1,3 +1,4 @@
-# Development dependencies: the package in editable mode plus its dev extras
-# (ruff, mypy, pytest, build, twine). Install with:  pip install -r requirements-dev.txt
+# Development dependencies: the package in editable mode plus its dev extras (ruff, mypy,
+# pytest, pytest-timeout, build, twine and the pinned reference parsers Werkzeug, hishel and
+# CacheControl). Install with:  pip install -r requirements-dev.txt
 -e .[dev]
