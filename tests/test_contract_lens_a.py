@@ -84,3 +84,8 @@ def test_keys_and_values_are_live_views() -> None:
     assert len(keys) == 2 and list(keys) == list(keys) == ["max-age", "x-new"]
     assert list(values) == [5, 1]
     assert keys & {"x-new", "other"} == {"x-new"}
+
+
+@pytest.mark.parametrize("zero", ["0", "00", 0])
+def test_build_targeted_keeps_a_zero_lifetime(zero: str | int) -> None:
+    assert build_targeted(CacheControl({"max-age": zero})) == "max-age=0"
