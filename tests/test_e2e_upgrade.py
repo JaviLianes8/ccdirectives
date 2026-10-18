@@ -23,7 +23,7 @@ pytestmark = pytest.mark.skipif(
 )
 
 PROBE = r"""
-import json, math, random, subprocess, sys
+import json, math, os, random, subprocess, sys
 import ccdirectives as c
 
 def outcome(call, detail=True):
@@ -70,6 +70,15 @@ for args, stdin in ((["max-age=5"], b""), (["--strict", "max-age=x"], b""),
     cli.append([run.returncode, run.stdout.decode("latin-1").replace("\r\n", "\n")])
 age = subprocess.run([sys.executable, "-m", "ccdirectives", "--age", "1_0", "a"],
                      capture_output=True)
+huge = b"HTTP/1.1 200 OK\r\nExpires: Mon, 01 Jan 99999999999 00:00:00 GMT\r\n\r\n"
+dated = subprocess.run([sys.executable, "-m", "ccdirectives"], input=huge, capture_output=True)
+noisy = subprocess.run([sys.executable, "-m", "ccdirectives", "--x" + "a" * 5000],
+                       capture_output=True)
+gone, pipe = os.pipe()
+os.close(gone)
+helped = subprocess.run([sys.executable, "-m", "ccdirectives", "--help"], stdout=pipe,
+                        stderr=subprocess.PIPE)
+os.close(pipe)
 class Loud(int):
     def __str__(self): return "1\r\nX: y"
 changed = {
@@ -88,6 +97,10 @@ changed = {
     "age_underscore": age.returncode,
     "empty_private": c.may_store(c.parse('private=""'), shared=True),
     "bad_s_maxage": outcome(lambda: c.parse_targeted("s-maxage=1.5")),
+    "zero_is_false": c.CacheControl({"max-age": 0}) == c.CacheControl({"max-age": False}),
+    "huge_date": [dated.returncode, b"Traceback" in dated.stderr],
+    "usage_echo": [noisy.returncode, len(noisy.stderr) > 1000],
+    "help_closed": [helped.returncode, helped.stderr != b""],
 }
 print(json.dumps({"version": c.__version__, "results": results, "cli": cli, "changed": changed}))
 """
@@ -117,6 +130,9 @@ def test_upgrade_from_pypi_0_2_0_keeps_every_result(tmp_path: Path) -> None:
     assert len(new["results"]) > 30_000
     assert new["results"] == old["results"]
     assert new["cli"] == old["cli"]
+    # Python 3.10 tracebacks (exit 1) where later versions exit 120 after a flush warning.
+    status, noise = old["changed"].pop("help_closed")
+    assert status in (1, 120) and noise
     assert old["changed"] == {
         "strict_string": ["ok", "CacheControl(directives={'a': True}, duplicates=frozenset())"],
         "shared_int": ["ok", "False"],
@@ -131,6 +147,9 @@ def test_upgrade_from_pypi_0_2_0_keeps_every_result(tmp_path: Path) -> None:
         "age_underscore": 0,
         "empty_private": True,
         "bad_s_maxage": ["ok", "CacheControl(directives={}, duplicates=frozenset())"],
+        "zero_is_false": True,
+        "huge_date": [1, True],
+        "usage_echo": [2, True],
     }
     assert new["changed"] == {
         "strict_string": ["TypeError"],
@@ -149,4 +168,8 @@ def test_upgrade_from_pypi_0_2_0_keeps_every_result(tmp_path: Path) -> None:
             "ok",
             "CacheControl(directives={'s-maxage': True}, duplicates=frozenset())",
         ],
+        "zero_is_false": False,
+        "huge_date": [0, False],
+        "usage_echo": [2, False],
+        "help_closed": [1, False],
     }
