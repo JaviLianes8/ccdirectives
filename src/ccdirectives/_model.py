@@ -35,14 +35,23 @@ def checked_items(cache_control: CacheControl) -> list[tuple[str, DirectiveValue
     return [(plain_str("directive names", name), _checked(name, value)) for name, value in pairs]
 
 
-@dataclass
+def _compared(
+    cache_control: CacheControl,
+) -> tuple[dict[str, tuple[str, DirectiveValue]], frozenset[str]]:
+    # A dict takes False for 0 and True for 1, but "max-age=0" and no max-age differ.
+    pairs = {name: (type(value).__name__, value) for name, value in checked_items(cache_control)}
+    return pairs, frozenset(key(name) for name in cache_control.duplicates)
+
+
+@dataclass(eq=False)
 class CacheControl(Accessors):
     """An ordered, case-insensitive collection of Cache-Control directives.
 
     ``duplicates`` names the directives that appeared more than once; the stored value is
     the first occurrence. A value of ``False`` means absent: ``build`` leaves it out.
     Names are stored with ASCII letters in lower case, and values as plain ``int``,
-    ``str`` or ``bool``.
+    ``str`` or ``bool``. Two structures are equal when they hold the same names, values of
+    the same type and duplicates, in any order, so ``0`` and ``False`` differ.
 
     >>> cc = CacheControl({"Max-Age": 60, "private": "Set-Cookie", "MAX-AGE": 5})
     >>> cc.max_age, cc["PRIVATE"], cc.private_fields, sorted(cc.duplicates)
@@ -50,6 +59,8 @@ class CacheControl(Accessors):
     >>> cc["no-store"] = True
     >>> list(cc), "no-store" in cc, cc.has("public"), cc.seconds("max-age")
     (['max-age', 'private', 'no-store'], True, False, 60)
+    >>> CacheControl({"max-age": 0}) == CacheControl({"max-age": False})
+    False
     """
 
     directives: dict[str, DirectiveValue] = field(default_factory=dict)
@@ -71,6 +82,11 @@ class CacheControl(Accessors):
             normalised[folded] = checked
         self.directives = normalised
         self.duplicates = frozenset(repeated)
+
+    def __eq__(self, other: object) -> bool:
+        if type(other) is not type(self):
+            return NotImplemented
+        return _compared(self) == _compared(other)
 
     def __getitem__(self, name: str) -> DirectiveValue:
         folded = key(name)
