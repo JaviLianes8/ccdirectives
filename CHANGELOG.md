@@ -59,7 +59,12 @@ under Fixed.
   output (also a stream object closed in the calling process) exits 1 without a traceback,
   an interrupt exits 130, a closed standard input is a
   usage error; folded header lines are joined in linear time.
-- The sdist is built from an explicit list of files.
+- Command line help: the placeholders read `VALUE`, `SECONDS` and `FIELD`, and the
+  description lists every exit status.
+- Packaging: `Development Status :: 5 - Production/Stable`; the project URL `Repository`
+  is now `Source`; the `dev` extra adds pytest-timeout and the pinned Werkzeug, hishel and
+  CacheControl used as reference parsers. The sdist is built from an explicit list of
+  files.
 
 ### Fixed
 
