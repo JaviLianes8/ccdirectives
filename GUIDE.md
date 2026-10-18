@@ -55,7 +55,10 @@ the first and should not write the second, but a recipient has to read both.
 every name, keeps the first of two names that fold together and adds it to
 `duplicates`, and stores plain `int`, `str` and `bool` values (subclasses are converted, so
 their methods cannot change what `build` writes). `False` means absent. Two structures
-are equal when they hold the same names, values and duplicates, in any order.
+are equal when they hold the same names, values of the same type and duplicates, in any
+order: unlike in a `dict`, `0` and `False` (`max-age=0` against no `max-age`) and `1` and
+`True` differ. A structure is never equal to an object of another type, and comparing one
+whose `directives` were edited to hold a value of another type raises `TypeError`.
 
 - Item access, `in`, `len`, iteration, `get`, `keys`, `values`, `items`, assignment and
   `del` ignore case; `dict(cc)` copies the directives.
@@ -141,16 +144,20 @@ must be `bool`. `response` and `request` must be `CacheControl` (`TypeError`).
 the chosen field, its directives and the verdict as JSON (ASCII only). Without VALUE it
 reads standard input as octets (ISO-8859-1): a response head (the last one of a `curl -sI`
 dump) or a bare value. From a head it takes `Age`, and `Expires` and `Date` when
-`Cache-Control` applies; an `Expires` that does not parse means already expired. On POSIX
-an argument is read as the octets it was given, like standard input. `--strict` checks a
-response head with the response rules; a VALUE or a bare value on standard input has no
-known direction, so it is checked with the more permissive rule of the two (a request
-directive with an argument it never takes, such as `only-if-cached=1`, is still refused
-there, while a head treats it as a response extension).
+`Cache-Control` applies; an `Expires` that does not parse means already expired, and a
+`Date` that does not parse is replaced by the current time (a year or an offset no date
+can hold does not parse). On POSIX an argument is read as the octets it was given, like
+standard input. `--strict` checks a response head with the response rules; a VALUE or a
+bare value on standard input has no known direction, so it is checked with the more
+permissive rule of the two (a request directive with an argument it never takes, such as
+`only-if-cached=1`, is still refused there, while a head treats it as a response
+extension).
 
-Exit status: 0 printed, 1 rejected by `--strict` or an output that closed or failed, 2 a
-usage error (including a `--age` that is not ASCII digits and a closed standard input),
-130 interrupted. Messages go to standard error and are dropped when it is closed.
+Exit status: 0 printed (also the help of `--help`), 1 rejected by `--strict` or an output
+that closed or failed (also while writing the help), 2 a usage error (including a `--age`
+that is not ASCII digits and a closed standard input), 130 interrupted. Messages go to
+standard error and are dropped when it is closed; a usage error shows at most 200
+characters of the problem.
 
 ## Compared with other libraries
 
@@ -186,9 +193,11 @@ is part of the repository or the packages.
 
 ## Upgrading from 0.2.0
 
-Results on valid input are unchanged. What changed is listed under 1.0.0 in
-[CHANGELOG.md](https://github.com/JaviLianes8/ccdirectives/blob/main/CHANGELOG.md): option
-flags must be `bool`, arguments of the wrong type raise `TypeError`, times must be finite,
-overflowing calculations give 2147483648, messages are bounded, subclasses are read as
-plain values, and the command line handles closed streams and reads `--age` as
-delta-seconds.
+Results on valid input are unchanged, with three exceptions besides the fixes: ages and
+lifetimes are capped at 2147483648, the time arithmetic is exact, and equality tells `0`
+from `False`. The 1.0.0 section of
+[CHANGELOG.md](https://github.com/JaviLianes8/ccdirectives/blob/main/CHANGELOG.md) lists
+every change: option flags must be `bool`, arguments of the wrong type raise `TypeError`,
+times must be finite, overflowing calculations give 2147483648, messages are bounded,
+subclasses are read as plain values, and the command line handles closed streams, bounds
+usage errors and reads `--age` as delta-seconds.

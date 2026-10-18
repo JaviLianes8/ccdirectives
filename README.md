@@ -1,5 +1,7 @@
 # ccdirectives
 
+[![Lianes8 Certified](https://lianes8studio.com/certified/lianes8-certified-badge.svg)](https://lianes8studio.com/certified)
+
 Parse, validate and build the HTTP `Cache-Control` header (RFC 9111) and targeted fields
 such as `CDN-Cache-Control` (RFC 9213), and decide freshness, typed and zero-dependency.
 

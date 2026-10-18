@@ -6,16 +6,20 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-## [1.0.0] - 2026-10-17
+## [1.0.0] - 2026-10-18
 
 The public API is now stable: the seventeen names in `__all__`, their signatures and
 defaults, the error types and the command line options are kept for the 1.x series.
-Results on valid input are the same as in 0.2.0, except for the two corrections listed
-under Fixed.
+Results on valid input are the same as in 0.2.0, except for the corrections listed under
+Fixed and three changes listed under Changed: ages and lifetimes are capped at
+2147483648, the time arithmetic is exact, and equality tells `0` from `False`.
 
 ### Added
 
 - `CacheControl.keys()` and `values()`, so `dict(cc)` copies the directives.
+- `GUIDE.md`, the reference for every rule, error and option, the command line, the
+  differences from Werkzeug, hishel and CacheControl, and upgrading from 0.2.0.
+- A runnable example in the docstring of every public name and `CacheControl` method.
 
 ### Changed
 
@@ -52,13 +56,20 @@ under Fixed.
   `parse`; other values still raise `ValueError` at run time.
 - `CacheControl(duplicates=...)` takes any iterable of names but refuses a string. A
   missing name raises `KeyError` with the name cut to 40 characters.
+- Two `CacheControl` structures are equal only when their values also have the same
+  type: `max-age=0` and a `max-age` of `False` (absent), or `1` and `True`, no longer
+  compare equal. Comparing a structure whose `directives` were edited to hold a value of
+  another type raises `TypeError`, as `build` does.
 - Public names report `ccdirectives` as their module; the stray `annotations` attribute is
   gone from the package.
 - Command line: `--age` takes ASCII digits only (no sign, underscore or other digits);
   on POSIX an argument is read as the octets it was given, like standard input; a closed
   output (also a stream object closed in the calling process) exits 1 without a traceback,
   an interrupt exits 130, a closed standard input is a
-  usage error; folded header lines are joined in linear time.
+  usage error; folded header lines are joined in linear time. Usage errors show at most
+  200 characters of the problem (an unrecognized argument was repeated whole), and
+  `--help` follows the rules of the report: a closed output exits 1 quietly (it exited
+  120 with a warning, or with a traceback on Python 3.10).
 - Command line help: the placeholders read `VALUE`, `SECONDS` and `FIELD`, and the
   description lists every exit status.
 - Packaging: `Development Status :: 5 - Production/Stable`; the project URL `Repository`
@@ -74,8 +85,12 @@ under Fixed.
 - `parse_targeted` keeps an invalid `s-maxage` bare instead of dropping it, so a shared
   cache gets a lifetime of 0 and no stale use, as with an invalid value in
   `Cache-Control`.
+- The command line no longer stops with a traceback when a response head has an
+  `Expires` or `Date` with a year or a time zone offset too large for a date. Such a
+  value does not parse, so `Expires` means already expired (RFC 9111 section 5.3) and
+  `Date` is replaced by the current time.
 
-## [0.2.0]
+## [0.2.0] - 2026-10-17
 
 ### Added
 
