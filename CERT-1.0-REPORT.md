@@ -11,8 +11,8 @@ Progress:
 - [x] Packaging, e2e and upgrade from PyPI 0.2.0 (items 8, 10, 13, 14), author run
 - [x] Five QA lenses report PASS (item 19)
 - [x] Independent reviewer reports PASS (item 16)
-- [x] Gates (item 15), final run at a6c10d4
-- [ ] PR and trace guard CLEAN (item 17); merge and publish left to the maintainer
+- [x] Gates (item 15), final run at a6c10d4, rerun at the release head 2643e2d
+- [x] PR and trace guard CLEAN (item 17); merge and publish left to the maintainer
 
 ## Baseline on 0.2.0 (before any change)
 
@@ -835,3 +835,24 @@ Fresh reviewer, own clone, heavy runs on Elena's PC (CPython 3.14.2). Every item
 
 Observations, not failures: `_head.py` writes a literal tab inside `strip(" \t")`
 where the rest of the code writes the escape (cosmetic, behaviour pinned by a test).
+
+## Final gates at the release head 2643e2d
+
+Fresh clone of `release/1.0.0` from GitHub at 2643e2d (the commits after bf52363 only
+touch this report), on the laptop under an auto:cpu turn (portatil/1, CPython 3.14.6,
+2026-10-19), with the 26 third-party files fetched by `scripts/fetch_upstream.py` and
+all matching the manifest:
+
+- `ruff format --check .` exit 0, `ruff check .` exit 0, `mypy --strict src` exit 0,
+  `mypy --strict src tests scripts` exit 0 (65 files); `pytest` 548 passed, 2 skipped
+  (the two opt-in end-to-end modules), exit 0.
+- With `CCDIRECTIVES_E2E=1` and `CCDIRECTIVES_E2E_PYPI=1`: the wheel and upgrade modules,
+  2 passed, exit 0.
+- `python -m build` exit 0; `twine check --strict` PASSED for
+  `ccdirectives-1.0.0-py3-none-any.whl` and `ccdirectives-1.0.0.tar.gz`.
+- Installed package: the wheel in a throwaway venv with only the test tools and the
+  three reference parsers, the sdist suite run against it with its `src` removed
+  (`ccdirectives.__file__` in the venv's site-packages, version 1.0.0): 548 passed,
+  2 opt-in skipped, exit 0.
+
+The clone folder was deleted and the turn released afterwards.
