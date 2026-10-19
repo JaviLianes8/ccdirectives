@@ -672,3 +672,27 @@ Run after the fixes, clone of bbb378b on Elena's PC (CPython 3.14.2, auto:cpu tu
 elena/1, fetched sources present): `ruff format --check .`, `ruff check .`,
 `mypy --strict src tests scripts` exit 0; with `CCDIRECTIVES_E2E=1` and
 `CCDIRECTIVES_E2E_PYPI=1`, `pytest` 506 passed, exit 0. Fix commit: bbb378b.
+
+## QA lenses (item 19), round 5 at 4ca01dc
+
+One lens reported a finding (e: contract strength), a surviving mutant with no behaviour
+bug: the code already rejects minute 60, so it got contracts that pass on the code and
+fail on the mutant. No behaviour changed, so the CHANGELOG is unchanged.
+
+| Finding | Fix |
+| --- | --- |
+| e-F3 `_stamp` could accept minute 60 (`minute > 60`) | `Sun, 06 Nov 1994 08:60:00 GMT`, `Sunday, 06-Nov-94 08:60:00 GMT` and `Sun Nov  6 08:60:00 1994` added to the rejected dates in `tests/test_contract_qa1_head.py`, next to 24:00:00; `tests/test_contract_qa5.py` checks that the CLI with `Date: Sun, 06 Nov 1994 08:00:00 GMT`, `Cache-Control: public` and an `Expires` at 09:60:00 in each of the three forms gives lifetime 0 |
+
+The mutant was applied alone to a copy of the tree and the two contract files run
+against it: all six new cases fail.
+
+| Mutant | Failing tests |
+| --- | --- |
+| F3 `minute > 59` as `minute > 60` in `_stamp` | `test_other_dates_do_not_parse` (the three minute 60 forms), `test_an_expires_at_minute_60_means_already_expired` (all three forms) |
+
+Disputed findings: none.
+
+Run after the fixes, clone of 4aa6b65 on Elena's PC (CPython 3.14.2, auto:cpu turn
+elena/2, fetched sources present): `ruff format --check .`, `ruff check .`,
+`mypy --strict src tests scripts` exit 0; with `CCDIRECTIVES_E2E=1` and
+`CCDIRECTIVES_E2E_PYPI=1`, `pytest` 512 passed, exit 0. Fix commit: 4aa6b65.
