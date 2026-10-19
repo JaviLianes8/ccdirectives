@@ -696,3 +696,24 @@ Run after the fixes, clone of 4aa6b65 on Elena's PC (CPython 3.14.2, auto:cpu tu
 elena/2, fetched sources present): `ruff format --check .`, `ruff check .`,
 `mypy --strict src tests scripts` exit 0; with `CCDIRECTIVES_E2E=1` and
 `CCDIRECTIVES_E2E_PYPI=1`, `pytest` 512 passed, exit 0. Fix commit: 4aa6b65.
+
+## QA lenses (item 19), round 6 at 6582d74
+
+One lens reported a finding (e: contract strength), a surviving mutant with no behaviour
+bug: `age_of` already treats an Age member with whitespace inside as invalid and counts
+it as 0, so it got contracts that pass on the code and fail on the mutant. No behaviour
+changed, so the CHANGELOG is unchanged.
+
+| Finding | Fix |
+| --- | --- |
+| e-F1-HA04 `age_of` could read only the part of the first member before a space | `tests/test_contract_qa6.py` checks that `age_of` gives 0 for the Age values `12 34`, `1 2, 3`, `12<TAB>34` and ` 12 34 , 5`, and that the CLI reports `"age": 0` for a head with each of them and `Cache-Control: max-age=60` |
+
+The mutant was applied alone to a copy of the tree and the new contract file run
+against it: six of the eight cases fail (the tab cases pass on the mutant, which splits
+on a space only, and stay as coverage).
+
+| Mutant | Failing tests |
+| --- | --- |
+| HA04 `delta_seconds(first)` as `delta_seconds(first.split(" ")[0])` in `age_of` | `test_an_age_member_with_inner_whitespace_counts_as_zero` and `test_an_age_member_with_inner_whitespace_reports_age_zero` (`12 34`, `1 2, 3`, ` 12 34 , 5`) |
+
+Disputed findings: none.
