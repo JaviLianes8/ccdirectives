@@ -745,3 +745,9 @@ with `Age: 99999999999` still reports 2147483648 because `assess` caps the age i
 | A10 `delta_seconds(first) or 0` as `int(first) if first.isdigit() else 0` in `age_of` | `test_an_age_past_2_to_the_31_is_capped` (`99999999999`, `2147483649`, the 80 digit value), `test_an_age_with_non_ascii_digits_counts_as_zero` (all five), `test_an_age_with_a_latin1_superscript_reports_age_zero` (all three, the mutant raises `ValueError`) |
 
 Disputed findings: none.
+
+Run after the fixes, clone of 278b0d6 on Elena's PC (CPython 3.14.2, auto:cpu turn
+elena/1, fetched sources present, pytest basetemp outside the clone): `ruff format
+--check .`, `ruff check .`, `mypy --strict src tests scripts` exit 0; with
+`CCDIRECTIVES_E2E=1` and `CCDIRECTIVES_E2E_PYPI=1`, `pytest` 534 passed, exit 0. Fix
+commit: 278b0d6.
