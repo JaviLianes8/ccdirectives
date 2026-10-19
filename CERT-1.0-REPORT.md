@@ -604,3 +604,9 @@ listed.
 | N3 years compared, not instants | `test_the_fifty_year_rule_compares_instants[Thursday, 31-Dec-76 00:00:00 GMT-1976]` |
 
 Disputed findings: none.
+
+Run after the fixes, clone of 0dd886e on Elena's PC (CPython 3.14.2, auto:cpu turn
+elena/1, fetched sources present): `ruff format --check .`, `ruff check .`,
+`mypy --strict src tests scripts` exit 0; `pytest` 476 passed, 2 skipped (the opt-in
+end-to-end modules), exit 0; with `CCDIRECTIVES_E2E=1` and `CCDIRECTIVES_E2E_PYPI=1` the
+wheel and upgrade modules passed, exit 0. Fix commit: 0dd886e.
