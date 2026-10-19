@@ -532,3 +532,37 @@ Fresh clones of the pushed head a6c10d4 on Elena's PC (CPython 3.14.2, auto:cpu 
   against it (its `src` removed): CPython 3.10.19, 3.11.5, 3.12.12, 3.13.2, 3.14.2 and
   3.14.2 free-threaded, 374 passed and 2 opt-in skipped on each, exit 0; 3.8.20 and 3.9.25
   refused by pip as below `requires-python`.
+
+## QA lenses (item 19), round 1 at 7361bc2
+
+Four lenses reported findings (a: API and docs, b: correctness and ground truth, c:
+adversarial, e: contract strength). Every behaviour finding first got a contract that
+failed on 7361bc2 (`tests/test_contract_qa1.py`, `tests/test_contract_qa1_head.py`, a new
+line in `tests/test_typing.py`), then the fix; every behaviour change is in CHANGELOG
+1.0.0.
+
+| Finding | Fix |
+| --- | --- |
+| a-F1 `False` absent only for some operations | `False` is dropped on construction and assignment and skipped by `build`, `build_targeted` and equality when set directly; `in`, `len`, iteration, `dict(cc)`, `extensions()` and `==` now agree with `has()` |
+| a-F2 `select` leaked the interpreter's unbounded `TypeError` | headers and targets are checked for iterability, message built with the cut type name |
+| a-F3 `select` type refused lists of two | `Headers` accepts `tuple[str, str]` and `list[str]` pairs; mypy check added |
+| a-F4 undocumented errors and rounding | GUIDE and docstrings of `parse`, `freshness_lifetime` and `assess` list the `TypeError` and `ValueError` cases and the floor of `expires - date`; contract for both |
+| a-F5 properties without docstrings | every `CacheControl` property (moved to `_props.py` for the 200-line limit) has a docstring with a doctest; a contract runs all 18 |
+| b-F1, c-F3 asctime refused | new `_dates.http_date` reads the three RFC 9110 section 5.6.7 formats, all as UTC |
+| b-F2 list-based `Age` read as 0 | first member used (RFC 9111 section 5.1) |
+| b-F3 non-GMT `Expires` used | a zone other than `GMT` is invalid, so `Expires` means already expired |
+| b-F4 rfc850 years 69 to 76 put in 19xx | 50-year rule relative to the current year |
+| b-F5 "one exception" in strict mode | GUIDE and README now name both exceptions (argument on `immutable`, repeated directives) |
+| c-F1 `private=5` loosened by the round trip | `build` and `build_targeted` raise `CacheControlError` for a number on `no-cache` or `private`; contract that `parse(build(x), strict=True)` and the targeted round trip keep the `may_store` verdict and field lists |
+| c-F2 years below 100 moved to 20xx | four-digit years are read as written; a two-digit year in IMF-fixdate is invalid |
+| c-F4 `Age` stripped with `str.strip()` | only SP and HTAB stripped |
+| e-F1 to e-F4 surviving mutants | contracts added; each mutant (no cap in `parse_targeted`, reversed targets, case-sensitive `cache-control:` prefix, `Name :` field kept) now fails `test_contract_qa1*.py`, checked one at a time |
+| e-F5 upgrade test red on Windows 3.14.2 | the 0.2.0 closed-output probe accepts exit 1 or 120 with or without output |
+
+Disputed findings: none.
+
+Run after the fixes, fresh clone of the commit on Elena's PC (CPython 3.14.2, auto:cpu
+turn elena/2, fetched sources present): `ruff format --check .`, `ruff check .`,
+`mypy --strict src tests scripts` exit 0; `pytest` 428 passed, 2 skipped (the opt-in
+end-to-end modules), exit 0; with `CCDIRECTIVES_E2E=1` and `CCDIRECTIVES_E2E_PYPI=1` the
+wheel and upgrade modules passed, exit 0. Fix commit: 9cc83ff.
