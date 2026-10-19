@@ -723,3 +723,25 @@ elena/1, fetched sources present, pytest basetemp outside the clone): `ruff form
 --check .`, `ruff check .`, `mypy --strict src tests scripts` exit 0; with
 `CCDIRECTIVES_E2E=1` and `CCDIRECTIVES_E2E_PYPI=1`, `pytest` 520 passed, exit 0. Fix
 commit: abb8f3c.
+
+## QA lenses (item 19), round 7 at 7ecd03a
+
+One lens reported a finding (e: contract strength), a surviving mutant with no behaviour
+bug: `age_of` already reads Age as ASCII delta-seconds capped at 2147483648 and counts a
+member with any other digit as 0, so it got contracts that pass on the code and fail on
+the mutant. No behaviour changed, so the CHANGELOG is unchanged.
+
+| Finding | Fix |
+| --- | --- |
+| e-F2-A10 `age_of` could read Age with `int(first) if first.isdigit() else 0` | `tests/test_contract_qa7.py` checks that `age_of` gives 2147483648 for `99999999999`, `2147483649`, `2147483648` and 40 zeros then 40 nines, keeps `2147483647`, and gives 0 for Arabic-Indic, fullwidth and superscript digits (`U+0661 U+0662`, `U+FF11 U+FF12`, `U+00B2`, `1 U+00B2`, `U+FF11, 5`); the CLI, run on a head with `Age: ` and the Latin-1 bytes `B2`, `B9 B3` or `1 B2, 5`, exits 0 and reports `"age": 0` |
+
+The mutant was applied alone to a copy of the tree and the new contract file run
+against it: eleven of the fourteen cases fail. The three that pass on the mutant stay
+as coverage: `2147483648` and `2147483647` are read the same by `int`, and the CLI case
+with `Age: 99999999999` still reports 2147483648 because `assess` caps the age itself.
+
+| Mutant | Failing tests |
+| --- | --- |
+| A10 `delta_seconds(first) or 0` as `int(first) if first.isdigit() else 0` in `age_of` | `test_an_age_past_2_to_the_31_is_capped` (`99999999999`, `2147483649`, the 80 digit value), `test_an_age_with_non_ascii_digits_counts_as_zero` (all five), `test_an_age_with_a_latin1_superscript_reports_age_zero` (all three, the mutant raises `ValueError`) |
+
+Disputed findings: none.
