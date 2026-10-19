@@ -11,7 +11,7 @@ Progress:
 - [x] Packaging, e2e and upgrade from PyPI 0.2.0 (items 8, 10, 13, 14), author run
 - [ ] Five QA lenses report PASS (item 19)
 - [ ] Independent reviewer reports PASS (item 16)
-- [ ] Gates (item 15), final run
+- [x] Gates (item 15), final run at a6c10d4
 - [ ] PR and trace guard CLEAN (item 17); merge and publish left to the maintainer
 
 ## Baseline on 0.2.0 (before any change)
@@ -510,3 +510,25 @@ dependency; the sdist is an explicit list (src, tests, the two scripts, README, 
 CHANGELOG, CONTRIBUTING, LICENSE, requirements-dev.txt) without fetched files, this
 report or improvement notes; the wheel holds the package, `py.typed`, the entry point and
 the licence.
+
+## Gates (item 15), final run at a6c10d4
+
+Fresh clones of the pushed head a6c10d4 on Elena's PC (CPython 3.14.2, auto:cpu turns,
+2026-10-19), the fetched sources checked against the manifest first (25 files, all ok):
+
+- `ruff format --check .` exit 0, `ruff check .` exit 0, `mypy --strict src` exit 0,
+  `mypy --strict src tests` and `mypy --strict src tests scripts` exit 0; `pytest`: 374
+  passed, 2 skipped (the two opt-in end-to-end modules), exit 0.
+- With `CCDIRECTIVES_E2E=1` and `CCDIRECTIVES_E2E_PYPI=1`: the wheel, upgrade and install
+  modules, 4 passed (wheel in a throwaway venv, console script and `python -m` by
+  subprocess, upgrade in place from PyPI 0.2.0, which is still the only release).
+- `python -m build` exit 0 and `twine check --strict` PASSED for the wheel and the sdist.
+  The sdist holds src, tests (with `tests/upstream/MANIFEST.json`, no fetched file), the
+  two scripts, README, GUIDE, CHANGELOG, CONTRIBUTING, LICENSE, requirements-dev.txt,
+  pyproject and `.gitignore`; the wheel holds the package, `py.typed`, the entry point and
+  `licenses/LICENSE`. METADATA: 1.0.0, Production/Stable, Python 3.10 to 3.14, MIT, the
+  four project URLs, no runtime dependency.
+- Interpreter matrix, the 1.0.0 wheel in a fresh venv per interpreter and the sdist suite
+  against it (its `src` removed): CPython 3.10.19, 3.11.5, 3.12.12, 3.13.2, 3.14.2 and
+  3.14.2 free-threaded, 374 passed and 2 opt-in skipped on each, exit 0; 3.8.20 and 3.9.25
+  refused by pip as below `requires-python`.
