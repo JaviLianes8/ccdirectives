@@ -717,3 +717,9 @@ on a space only, and stay as coverage).
 | HA04 `delta_seconds(first)` as `delta_seconds(first.split(" ")[0])` in `age_of` | `test_an_age_member_with_inner_whitespace_counts_as_zero` and `test_an_age_member_with_inner_whitespace_reports_age_zero` (`12 34`, `1 2, 3`, ` 12 34 , 5`) |
 
 Disputed findings: none.
+
+Run after the fixes, clone of abb8f3c on Elena's PC (CPython 3.14.2, auto:cpu turn
+elena/1, fetched sources present, pytest basetemp outside the clone): `ruff format
+--check .`, `ruff check .`, `mypy --strict src tests scripts` exit 0; with
+`CCDIRECTIVES_E2E=1` and `CCDIRECTIVES_E2E_PYPI=1`, `pytest` 520 passed, exit 0. Fix
+commit: abb8f3c.
