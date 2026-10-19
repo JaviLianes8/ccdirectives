@@ -9,8 +9,8 @@ Progress:
 - [x] Contract, fuzz and author mutation round (items 6, 9, 18)
 - [x] Docs: README, GUIDE, CHANGELOG (items 11, 12)
 - [x] Packaging, e2e and upgrade from PyPI 0.2.0 (items 8, 10, 13, 14), author run
-- [ ] Five QA lenses report PASS (item 19)
-- [ ] Independent reviewer reports PASS (item 16)
+- [x] Five QA lenses report PASS (item 19)
+- [x] Independent reviewer reports PASS (item 16)
 - [x] Gates (item 15), final run at a6c10d4
 - [ ] PR and trace guard CLEAN (item 17); merge and publish left to the maintainer
 
@@ -777,3 +777,61 @@ elena/1, fetched sources present, pytest basetemp inside the clone): `ruff forma
 --check .`, `ruff check .`, `mypy --strict src tests scripts` exit 0; with
 `CCDIRECTIVES_E2E=1` and `CCDIRECTIVES_E2E_PYPI=1`, `pytest` 550 passed, exit 0. Fix
 commit: d116b40.
+
+## QA verdicts (item 19)
+
+Each lens ran in its own clone, reported only back to the maintainer, and was rerun
+after every fix round until it passed. Report files are kept in the private QA folder,
+not in the repository.
+
+| Lens | Runs | Final verdict | Report | Commit |
+| --- | --- | --- | --- | --- |
+| a: API and docs | 4 (findings in rounds 1 to 3) | PASS | `lens-a-r4/REPORT.md` | 8a923ec |
+| b: correctness and ground truth | 3 (findings in rounds 1 and 2) | PASS | `lens-b-r3/REPORT.md` | 85988ff |
+| c: adversarial and robustness | 2 (findings in round 1) | PASS | `lens-c-r2/REPORT.md` | 6d12c6b |
+| d: packaging and real e2e | 1 | PASS | `lens-d-r1/REPORT.md` | 7361bc2 |
+| e: contract strength | 9 (findings in rounds 1 to 8) | PASS | no file, summary below | bf52363 |
+
+Lens e, final run at bf52363 (Elena's PC, fresh clone, CPython 3.14.2): the default
+suite gave 550 tests, 0 failures, 0 errors, 36 skipped. The round 8 mutant (P10, a
+field whose name only contains `age`) is killed by `test_contract_qa8.py`, and ten
+further mutants of `age_of` were all killed: `endswith`, `startswith` and prefix
+matches of the field name, a case-sensitive name, `strip()` for the member, no
+empty-member filter, the last member, a split on `;`, and only the first `Age` line.
+Two mutations were judged equivalent on every public path (`str.lower` for
+`ascii_lower`, since no non-ASCII character lowercases to `a`, `g` or `e`; a
+`.strip()` on the name, since `head_fields` already drops names with surrounding
+whitespace). No surviving mutant, no new finding.
+
+Lenses c and d passed at commits before the source changes of rounds 1 to 3; neither
+had findings, and the reviewer below reran packaging, e2e, the interpreter matrix and
+the date and head fuzz at the release head.
+
+## Independent review (item 16), at bf52363
+
+Fresh reviewer, own clone, heavy runs on Elena's PC (CPython 3.14.2). Every item passes.
+
+| Item | Verdict | Evidence |
+| --- | --- | --- |
+| 1 API stability | PASS | 17 public names, signatures read with `inspect`, CHANGELOG has Added, Changed and Fixed, API contracts green |
+| 2 `__all__` | PASS | exact; docs never import a private module; every public name reports `__module__` as `ccdirectives` |
+| 3 Docstrings | PASS | 89 doctest examples, 0 failures; every public class and function has an example |
+| 4 Typing | PASS | `mypy --strict src` and `src tests scripts` (65 files) exit 0, `py.typed` in the wheel, no `Any` in public signatures |
+| 5 Errors | PASS | hostile names, values, contexts, bytes, negative ages, NaN times: messages of 22 to 92 characters, values never repeated, names cut to 40 characters, documented error types |
+| 6 Contracts | PASS | the 23 contract files are green |
+| 7 Ground truth | PASS | 26 fetched files all match `MANIFEST.json`, none tracked or shipped; oracle fixture is recorded program output (seed 9111, Werkzeug 3.1.9, hishel 1.4.0, CacheControl 0.14.4) and the live comparison ran |
+| 8 Real e2e | PASS | wheel in a throwaway venv used from an empty folder with `python -I`; console script and `python -m` by subprocess; upgrade in place from PyPI 0.2.0; sdist installs; opt-in e2e suite 550 passed |
+| 9 Fuzz | PASS | property tests seeded (5861, 4231, 9651); own seeded fuzz (seed 20261019) of 60,000 strings with no unexpected exception; hostile inputs of 1e5 and 1e6 characters linear, at most 0.18 s |
+| 10 Pythons | PASS | wheel plus sdist suite on 3.10.19, 3.11.14, 3.12.12, 3.13.11, 3.14.2 and 3.14.2 free-threaded: 515 passed, 35 opt-in skipped, exit 0 each; 3.8.20 and 3.9.25 refused by pip |
+| 11 README | PASS | `twine check --strict` passed, absolute links, problem, why, install, usage, CLI, API table, GUIDE and CHANGELOG links; examples run by `test_docs` |
+| 12 CHANGELOG | PASS | `[1.0.0] - 2026-10-19` with a summary of what is stable |
+| 13 pyproject | PASS | 1.0.0, Production/Stable, Python 3.10 to 3.14, MIT, four project URLs, keywords, no runtime dependency |
+| 14 Contents | PASS | wheel: package, `py.typed`, entry point, licence; sdist: src, tests (only the upstream manifest), oracle fixture, scripts, docs, licence; no caches or scratch files |
+| 15 Gates | PASS | format, lint, `mypy --strict src` and `pytest` (548 passed, 2 opt-in skipped) exit 0 |
+| 16 Review | PASS | this review |
+| 17 PR | PASS | PR #3 from `release/1.0.0` open at bf52363 with a clean title and body; merge and publish are left to the maintainer |
+| 18 Mutations | PASS | author tables (82 and 212 mutations) and QA rounds 1 to 8 recorded above; survivors got contracts or were argued equivalent |
+| 19 QA lenses | PASS | five lens verdicts above |
+
+Observations, not failures: `_head.py` writes a literal tab inside `strip(" 	")`
+where the rest of the code writes the escape (cosmetic, behaviour pinned by a test).
