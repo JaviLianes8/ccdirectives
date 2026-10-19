@@ -833,5 +833,5 @@ Fresh reviewer, own clone, heavy runs on Elena's PC (CPython 3.14.2). Every item
 | 18 Mutations | PASS | author tables (82 and 212 mutations) and QA rounds 1 to 8 recorded above; survivors got contracts or were argued equivalent |
 | 19 QA lenses | PASS | five lens verdicts above |
 
-Observations, not failures: `_head.py` writes a literal tab inside `strip(" 	")`
+Observations, not failures: `_head.py` writes a literal tab inside `strip(" \t")`
 where the rest of the code writes the escape (cosmetic, behaviour pinned by a test).
