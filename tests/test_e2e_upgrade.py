@@ -130,9 +130,10 @@ def test_upgrade_from_pypi_0_2_0_keeps_every_result(tmp_path: Path) -> None:
     assert len(new["results"]) > 30_000
     assert new["results"] == old["results"]
     assert new["cli"] == old["cli"]
-    # Python 3.10 tracebacks (exit 1) where later versions exit 120 after a flush warning.
-    status, noise = old["changed"].pop("help_closed")
-    assert status in (1, 120) and noise
+    # 0.2.0 fails on a closed output: Python 3.10 with a traceback (exit 1), later versions
+    # with exit 120 and a flush warning, or exit 1 with no output on some Windows builds.
+    status, _noise = old["changed"].pop("help_closed")
+    assert status in (1, 120)
     assert old["changed"] == {
         "strict_string": ["ok", "CacheControl(directives={'a': True}, duplicates=frozenset())"],
         "shared_int": ["ok", "False"],

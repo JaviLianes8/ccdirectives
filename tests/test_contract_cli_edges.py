@@ -13,7 +13,7 @@ from typing import Any
 import pytest
 
 from ccdirectives._cli import main
-from ccdirectives._head import http_date
+from ccdirectives._dates import http_date
 
 _SRC_DIR = Path(__file__).resolve().parents[1] / "src"
 SRC = str(_SRC_DIR) if _SRC_DIR.is_dir() else ""

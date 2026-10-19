@@ -45,7 +45,8 @@ print(parse("max-stale").max_stale, parse(["max-age=60", "public"]).public)
 The default parser never raises on content: what it cannot read is skipped, and a broken
 quote cannot hide the directives after it. Strict mode validates instead, with the rules
 of a request or a response when you pass `context`. It holds a header to what a recipient
-must accept, so `max-age="60"` passes although a sender should not write it:
+must accept, so `max-age="60"` passes although a sender should not write it; it also
+refuses a repeated directive and an argument on `immutable`:
 
 ```python
 from ccdirectives import CacheControlError, parse

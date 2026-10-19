@@ -31,6 +31,7 @@ assess(CacheControl(), 1)
 parse(["max-age=1", "public"], strict=True, context="request")
 select([("Cache-Control", "no-store")])
 CacheControl().extensions("both")
+select([["CDN-Cache-Control", "max-age=1"]], ["CDN-Cache-Control"])
 """
 
 
@@ -90,3 +91,7 @@ def _revealed(output: str, line: int) -> str:
     assert match, output
     # Older mypy releases spell builtins with their module prefix.
     return match.group(1).replace("builtins.", "")
+
+
+def test_select_takes_lists_of_two_as_documented(mypy_output: str) -> None:
+    assert "snippet.py:23:" not in mypy_output, mypy_output

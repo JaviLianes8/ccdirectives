@@ -64,7 +64,8 @@ def assess(
     and ``max-stale`` to accept a stale response (``min-fresh`` only judges a fresh one).
     ``stale-if-error`` in the request is read as replacing the response's for that
     request: RFC 5861 section 4 scopes it to the request, the precedence is this
-    library's reading.
+    library's reading. ``expires`` and ``date`` work as in ``freshness_lifetime``, so
+    ``expires`` without ``date`` raises ``ValueError``.
 
     >>> from ccdirectives import parse
     >>> response = parse("max-age=600, stale-while-revalidate=30")

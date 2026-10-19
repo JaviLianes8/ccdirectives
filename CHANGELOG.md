@@ -60,6 +60,19 @@ Fixed and three changes listed under Changed: ages and lifetimes are capped at
   type: `max-age=0` and a `max-age` of `False` (absent), or `1` and `True`, no longer
   compare equal. Comparing a structure whose `directives` were edited to hold a value of
   another type raises `TypeError`, as `build` does.
+- A `False` value means absent everywhere: `CacheControl` leaves such a name out when it
+  is built (so it is not counted as a duplicate either) and assigning `False` removes the
+  name, so `in`, `len`, iteration, `keys`, `dict(cc)`, `extensions()` and equality agree
+  with `has()`, the properties and `build`. A `False` placed directly in `directives` is
+  skipped by `build`, `build_targeted` and equality.
+- `build` and `build_targeted` raise `CacheControlError` for a number on `no-cache` or
+  `private`: the structure read `private=5` as bare `private`, while the written
+  `private=5` reads as a list naming field `5`, which loosened what a shared cache may
+  store.
+- `select` types its pairs as tuples or lists of two, as documented, and raises a
+  `TypeError` with a bounded message for headers or targets that are not iterable (the
+  interpreter's message repeated the whole type name).
+- `CacheControl` properties each have a docstring with an example.
 - Public names report `ccdirectives` as their module; the stray `annotations` attribute is
   gone from the package.
 - Command line: `--age` takes ASCII digits only (no sign, underscore or other digits);
@@ -89,6 +102,17 @@ Fixed and three changes listed under Changed: ages and lifetimes are capped at
   `Expires` or `Date` with a year or a time zone offset too large for a date. Such a
   value does not parse, so `Expires` means already expired (RFC 9111 section 5.3) and
   `Date` is replaced by the current time.
+- The command line reads HTTP dates by RFC 9110 section 5.6.7 instead of the e-mail date
+  rules: the asctime format is accepted (an asctime `Expires` was read as already
+  expired and an asctime `Date` replaced by the current time), a two-digit RFC 850 year
+  follows the 50-year rule (`70` is 2070 in 2026, not 1970), a four-digit year is read as
+  written (`0049` was read as 2049, making a long past `Expires` fresh for decades), a
+  two-digit year in an IMF-fixdate is invalid, and a zone other than `GMT` is invalid, as
+  RFC 9111 section 4.2 asks for expiration.
+- The command line reads a list-based `Age` (`Age: 100, 5`) by its first member as RFC
+  9111 section 5.1 asks; it was read as 0, so a stale response was reported fresh. Only
+  spaces and tabs around the value are stripped, so `Age` with a no-break space or another
+  control character before the digits is invalid (0).
 - The command line drops the continuation lines of a response head field it does not
   read (a name with whitespace before the colon); they were added to the field above it.
 

@@ -33,7 +33,9 @@ def parse(
     registered name of the other direction is then treated as an extension. Strict mode
     checks what a recipient must accept, so the quoted form of delta-seconds and the token
     form of a field list pass (RFC 9111 section 5.2). Several lines are joined with ", "
-    and error offsets point into that joined value.
+    and error offsets point into that joined value. ``TypeError`` is raised for bytes, a
+    header that is not iterable and a line that is not a str; ``ValueError`` for an
+    unknown ``context``, in lenient mode too.
 
     >>> cc = parse('max-age=600, no-cache="Set-Cookie", MAX-AGE=5')
     >>> cc.max_age, cc.no_cache_fields, sorted(cc.duplicates)

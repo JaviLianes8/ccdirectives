@@ -37,7 +37,7 @@ class HasItems(Protocol):
     def items(self) -> Iterable[tuple[str, str]]: ...
 
 
-Headers = HasItems | Iterable[tuple[str, str]]
+Headers = HasItems | Iterable[tuple[str, str] | list[str]]
 
 
 def parse_targeted(value: str | Iterable[str]) -> CacheControl | None:
@@ -118,8 +118,6 @@ def build_targeted(cache_control: CacheControl) -> str:
     build(cache_control)
     members: dict[str, BareItem] = {}
     for name, value in checked_items(cache_control):
-        if value is False:
-            continue
         if is_a(value, str) and name in DELTA_DIRECTIVES:
             members[name] = delta_seconds(value) or 0
         elif is_a(value, str) and name not in FIELD_DIRECTIVES and is_sf_token(value):
@@ -154,12 +152,17 @@ def select(
     """
     if is_a(targets, (str, bytes)):
         raise TypeError("targets is a list of field names, not one string")
+    if not issubclass(type(targets), Iterable):
+        raise TypeError(f"targets must be an iterable of field names, not {type_name(targets)}")
     wanted = [plain_str("target names", target) for target in targets]
     if is_a(headers, (str, bytes)):
         raise TypeError("headers is a mapping or a list of (name, value) pairs")
     pairs = headers.items() if isinstance(headers, HasItems) else headers
+    if not issubclass(type(pairs), Iterable):
+        raise TypeError(f"headers must be a mapping or a list of pairs, not {type_name(pairs)}")
     lines: dict[str, list[str]] = {}
-    for pair in pairs:
+    for given in pairs:
+        pair: object = given
         # A two-character string or a two-key dict would unpack too: only tuples and lists.
         if is_a(pair, tuple):
             items: tuple[object, ...] | list[object] = tuple.__getitem__(pair, slice(None))

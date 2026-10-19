@@ -27,8 +27,9 @@ def freshness_lifetime(
     """The freshness lifetime in seconds by the first matching rule of RFC 9111 4.2.1.
 
     ``s-maxage`` counts for a shared cache, then ``max-age``, then ``expires - date``
-    (both in seconds since the epoch; pass the time of receipt as ``date`` when the
-    response has no Date). A directive that is present but not delta-seconds gives 0, as
+    (both in seconds since the epoch, rounded down to whole seconds; pass the time of
+    receipt as ``date`` when the response has no Date, as ``expires`` without ``date``
+    raises ``ValueError``). A directive that is present but not delta-seconds gives 0, as
     section 4.2.1 encourages treating invalid freshness information as stale. The result
     is at most 2147483648, the cap of section 1.2.2.
 

@@ -19,9 +19,10 @@ from ._cliio import (
     silence_stdout,
     write,
 )
+from ._dates import http_date
 from ._errors import CacheControlError
 from ._fresh import assess
-from ._head import age_of, field, head_fields, http_date
+from ._head import age_of, field, head_fields
 from ._model import CacheControl
 from ._parse import parse
 from ._targeted import select

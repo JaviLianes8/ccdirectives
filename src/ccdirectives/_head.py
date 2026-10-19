@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import email.utils
-
 from ._chars import ascii_lower, delta_seconds
 
 
@@ -44,18 +42,12 @@ def field(fields: list[tuple[str, str]], name: str) -> str | None:
 
 
 def age_of(fields: list[tuple[str, str]]) -> int:
-    """The Age field as delta-seconds, 0 when absent or invalid (RFC 9111 section 5.1)."""
+    """The Age field as delta-seconds, 0 when absent or invalid (RFC 9111 section 5.1).
+
+    Of a list-based value the first member counts, as section 5.1 asks of a cache; only
+    spaces and tabs around it are optional whitespace.
+    """
     value = field(fields, "Age")
-    return (delta_seconds(value.strip()) or 0) if value is not None else 0
-
-
-def http_date(value: str | None) -> float | None:
-    """Seconds since the epoch for an HTTP-date, or None when it does not parse."""
     if value is None:
-        return None
-    try:
-        parsed = email.utils.parsedate_to_datetime(value)
-    except (TypeError, ValueError, IndexError, OverflowError):
-        # OverflowError: a year or an offset too large for a date, which is no HTTP-date either.
-        return None
-    return parsed.timestamp() if parsed.tzinfo is not None else None
+        return 0
+    return delta_seconds(value.partition(",")[0].strip(" \t")) or 0

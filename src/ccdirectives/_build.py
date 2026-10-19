@@ -17,8 +17,10 @@ def build(cache_control: CacheControl) -> str:
     form and ``no-cache`` and ``private`` field lists in quoted-string form, as RFC 9111
     section 5.2 asks of senders; other arguments are quoted only when they are not tokens.
     Names that are not tokens, negative numbers, non-numeric or missing delta-seconds,
-    arguments on registered directives that take none, control characters and non-ASCII
-    text raise ``CacheControlError``, so the output always passes ``parse(strict=True)``.
+    arguments on registered directives that take none, a ``no-cache`` or ``private``
+    argument that is not a list of field names (a number included), control characters
+    and non-ASCII text raise ``CacheControlError``, so the output always passes
+    ``parse(strict=True)``.
 
     >>> from ccdirectives import CacheControl
     >>> build(CacheControl({"max-age": 3600, "private": "Set-Cookie", "public": False}))
@@ -30,8 +32,6 @@ def build(cache_control: CacheControl) -> str:
         raise TypeError(f"build takes a CacheControl, not {type_name(cache_control)}")
     parts: list[str] = []
     for name, value in checked_items(cache_control):
-        if value is False:
-            continue
         if not is_token(name):
             raise CacheControlError(f"directive name {shown(name)} is not a token")
         rule = argument_rule(name, None)
@@ -48,6 +48,9 @@ def build(cache_control: CacheControl) -> str:
 
 def _argument(name: str, value: DirectiveValue) -> str:
     if isinstance(value, int):
+        if name in FIELD_DIRECTIVES:
+            # A number is no field list: parse would read it as one, the model as bare.
+            raise CacheControlError(f"{shown(name)} argument is not a list of field names")
         if value < 0:
             raise CacheControlError(f"{shown(name)} cannot be negative")
         # RFC 9111 section 1.2.2: anything past 2^31 means the same, so write the cap.

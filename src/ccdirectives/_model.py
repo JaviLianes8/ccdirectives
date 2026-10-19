@@ -5,9 +5,10 @@ from __future__ import annotations
 from collections.abc import ItemsView, Iterable, Iterator, KeysView, ValuesView
 from dataclasses import dataclass, field
 
-from ._access import Accessors, DirectiveValue, key
+from ._access import DirectiveValue, key
 from ._chars import ascii_lower
 from ._checks import is_a, plain_int, plain_str, shown, type_name
+from ._props import Properties
 
 
 def _checked(name: object, value: object) -> DirectiveValue:
@@ -29,10 +30,12 @@ def _cut(name: str) -> str:
 
 def checked_items(cache_control: CacheControl) -> list[tuple[str, DirectiveValue]]:
     """The directives as plain (name, value) pairs, checked again after any direct edit."""
-    if not is_a(cache_control.directives, dict):
+    raw = cache_control.directives
+    if not is_a(raw, dict):
         raise TypeError("directives must be a dict of name to value")
-    pairs = dict.items(cache_control.directives)
-    return [(plain_str("directive names", name), _checked(name, value)) for name, value in pairs]
+    pairs = [(plain_str("directive names", n), _checked(n, v)) for n, v in dict.items(raw)]
+    # False means absent, also when it was set directly in ``directives``.
+    return [(name, value) for name, value in pairs if value is not False]
 
 
 def _compared(
@@ -44,11 +47,12 @@ def _compared(
 
 
 @dataclass(eq=False)
-class CacheControl(Accessors):
+class CacheControl(Properties):
     """An ordered, case-insensitive collection of Cache-Control directives.
 
     ``duplicates`` names the directives that appeared more than once; the stored value is
-    the first occurrence. A value of ``False`` means absent: ``build`` leaves it out.
+    the first occurrence. A value of ``False`` means absent: construction and assignment
+    drop the name, so it is neither stored nor counted as an occurrence.
     Names are stored with ASCII letters in lower case, and values as plain ``int``,
     ``str`` or ``bool``. Two structures are equal when they hold the same names, values of
     the same type and duplicates, in any order, so ``0`` and ``False`` differ.
@@ -61,6 +65,8 @@ class CacheControl(Accessors):
     (['max-age', 'private', 'no-store'], True, False, 60)
     >>> CacheControl({"max-age": 0}) == CacheControl({"max-age": False})
     False
+    >>> CacheControl({"public": False}) == CacheControl(), len(CacheControl({"public": False}))
+    (True, 0)
     """
 
     directives: dict[str, DirectiveValue] = field(default_factory=dict)
@@ -76,6 +82,8 @@ class CacheControl(Accessors):
         for name, value in dict.items(self.directives):
             checked = _checked(name, value)
             folded = key(name)
+            if checked is False:
+                continue
             if folded in normalised:
                 repeated.add(folded)
                 continue
@@ -97,7 +105,10 @@ class CacheControl(Accessors):
 
     def __setitem__(self, name: str, value: DirectiveValue) -> None:
         checked = _checked(name, value)
-        dict.__setitem__(self.directives, key(name), checked)
+        if checked is False:
+            dict.pop(self.directives, key(name), None)
+        else:
+            dict.__setitem__(self.directives, key(name), checked)
 
     def __delitem__(self, name: str) -> None:
         folded = key(name)

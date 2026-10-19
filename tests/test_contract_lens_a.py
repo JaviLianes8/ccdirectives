@@ -69,7 +69,7 @@ def test_an_integer_time_beyond_a_float_is_out_of_range() -> None:
 
 
 def test_select_takes_lists_of_two_as_pairs() -> None:
-    assert select([["CDN-Cache-Control", "max-age=9"]])[1].max_age == 9  # type: ignore[list-item]
+    assert select([["CDN-Cache-Control", "max-age=9"]])[1].max_age == 9
 
 
 def test_build_targeted_caps_delta_seconds_before_the_digit_limit() -> None:
