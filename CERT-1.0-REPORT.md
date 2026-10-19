@@ -610,3 +610,38 @@ elena/1, fetched sources present): `ruff format --check .`, `ruff check .`,
 `mypy --strict src tests scripts` exit 0; `pytest` 476 passed, 2 skipped (the opt-in
 end-to-end modules), exit 0; with `CCDIRECTIVES_E2E=1` and `CCDIRECTIVES_E2E_PYPI=1` the
 wheel and upgrade modules passed, exit 0. Fix commit: 0dd886e.
+
+## QA lenses (item 19), round 3 at 85988ff
+
+Two lenses reported findings (a: API and docs, e: contract strength). The behaviour
+finding first got a contract in `tests/test_contract_qa3.py` that failed on 85988ff, then
+the fix; the surviving mutants got contracts that pass on the code and fail on the
+mutant. The behaviour change is in CHANGELOG 1.0.0 (Fixed).
+
+| Finding | Fix |
+| --- | --- |
+| a-N1 `29-Feb-00` read in 2060 was invalid, against the documented rule | the rfc850 year is now chosen only among candidate years that have the day (six centuries are tried, so a leap year is always reached); `29-Feb-00` read in 2060, 2160 and 2250 is 2000-02-29 and the CLI gives lifetime 3600; GUIDE and docstring state the leap day case |
+| e-N14 the 50-year filter could reach four-digit years | `_stamp` takes an explicit `limit` that only the rfc850 branch passes, and a missing candidate returns None instead of raising; contracts that `06 Nov 3000` in IMF-fixdate and asctime is read as written, through `http_date` and through the CLI (lifetime capped at 2147483648, fresh) |
+| e-N10, e-N11 `_limit` minutes and seconds unchecked | contracts with now 12:30:30: `19-Oct-76` at 12:30:15, 12:30:30 and 12:15:00 is 2076, at 12:30:31 and 12:45:00 is 1976, and the CLI lifetimes 1577925015 and 1577924100 |
+| e-N03 `GMT` could be truncated to `GM` | contract that IMF-fixdate and rfc850-date ending in `GM`, or with no zone, do not parse, and such an `Expires` is already expired |
+| e-N05 asctime could take long day names | contract that `Sunday Nov  6 08:49:37 1994` (any case) does not parse, and such an `Expires` is already expired |
+
+Each mutant was applied one at a time to `src` and the whole suite run against it: every
+one fails, first failing test as listed.
+
+| Mutant | First failing test |
+| --- | --- |
+| N03 `_GMT` `[Gg][Mm][Tt]?` | `test_truncated_zones_and_long_asctime_days_do_not_parse[Sun, 06 Nov 1994 08:49:37 GM]` |
+| N05 asctime takes `_DAYS + _LONG_DAYS` | `test_truncated_zones_and_long_asctime_days_do_not_parse[Sunday Nov  6 08:49:37 1994]` |
+| N10 `_limit` seconds as 0 | `test_the_fifty_year_rule_compares_minutes_and_seconds[Monday, 19-Oct-76 12:30:15 GMT-2076]` |
+| N11 `_limit` minutes as 0 | `test_the_fifty_year_rule_compares_minutes_and_seconds[Monday, 19-Oct-76 12:30:15 GMT-2076]` |
+| N14 IMF-fixdate also given the 50-year limit | `test_four_digit_years_far_ahead_are_read_as_written[Sun, 06 Nov 3000 08:49:37 GMT]` |
+| N1 only three centuries tried | `test_february_29_takes_the_latest_year_that_has_it[now2-2000]` |
+| N1 candidate years not filtered by the day | `test_other_dates_do_not_parse[Mon, 31 Feb 1994 00:00:00 GMT]` |
+
+Disputed findings: none.
+
+Run after the fixes, clone of aaafc96 on the laptop (CPython 3.14.6, auto:cpu turn
+portatil/1, fetched sources present): `ruff format --check .`, `ruff check .`,
+`mypy --strict src tests scripts` exit 0; with `CCDIRECTIVES_E2E=1` and
+`CCDIRECTIVES_E2E_PYPI=1`, `pytest` 501 passed, exit 0. Fix commit: aaafc96.
