@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 
-from ._chars import field_names
+from ._chars import DELTA_MAX, field_names
+from ._checks import check_bool, check_seconds, is_a
+from ._lifetime import current_age, freshness_lifetime, policy
 from ._model import CacheControl
+
+__all__ = ["Freshness", "assess", "current_age", "freshness_lifetime", "may_store"]
 
 
 @dataclass(frozen=True)
@@ -17,6 +20,10 @@ class Freshness:
     applied, so such a response counts as stale. ``reusable`` means it may be sent without
     contacting the origin; ``stale_while_revalidate`` that it may be sent while a background
     revalidation runs; ``stale_if_error`` that it may be sent if the origin fails.
+
+    >>> verdict = Freshness(60, 90, False, False, True, False)
+    >>> verdict.staleness, verdict.stale_while_revalidate
+    (30, True)
     """
 
     lifetime: int | None
@@ -30,47 +37,6 @@ class Freshness:
     def staleness(self) -> int:
         """Seconds past the end of the lifetime, 0 while fresh."""
         return max(0, self.age - (self.lifetime or 0))
-
-
-def freshness_lifetime(
-    response: CacheControl,
-    *,
-    shared: bool = False,
-    expires: float | None = None,
-    date: float | None = None,
-) -> int | None:
-    """The freshness lifetime in seconds by the first matching rule of RFC 9111 4.2.1.
-
-    ``s-maxage`` counts for a shared cache, then ``max-age``, then ``expires - date``
-    (both in seconds since the epoch; pass the time of receipt as ``date`` when the
-    response has no Date). A directive that is present but not delta-seconds gives 0, as
-    section 4.2.1 encourages treating invalid freshness information as stale.
-    """
-    for name in ("s-maxage", "max-age") if shared else ("max-age",):
-        if response.has(name):
-            return response.seconds(name) or 0
-    if expires is None:
-        return None
-    if date is None:
-        raise ValueError("pass date (or the time the response was received) with expires")
-    return max(0, math.floor(expires - date))
-
-
-def current_age(
-    *,
-    date_value: float,
-    request_time: float,
-    response_time: float,
-    now: float,
-    age_value: int = 0,
-) -> int:
-    """The current age in whole seconds, rounded up (RFC 9111 section 4.2.3)."""
-    if age_value < 0:
-        raise ValueError("age_value cannot be negative")
-    apparent_age = max(0.0, response_time - date_value)
-    corrected_age_value = age_value + (response_time - request_time)
-    corrected_initial_age = max(apparent_age, corrected_age_value)
-    return max(0, math.ceil(corrected_initial_age + (now - response_time)))
 
 
 def _stale_forbidden(response: CacheControl, shared: bool) -> bool:
@@ -95,14 +61,24 @@ def assess(
     ``must-revalidate``, and for shared caches ``proxy-revalidate`` and ``s-maxage``);
     a ``no-cache`` response is never reusable without validation, qualified or not. The
     optional request directives narrow reuse: ``no-cache``, ``max-age``, ``min-fresh``,
-    and ``max-stale`` to accept a stale response. ``stale-if-error`` in the request takes
-    precedence over the response's for that request (RFC 5861 section 4).
+    and ``max-stale`` to accept a stale response (``min-fresh`` only judges a fresh one).
+    ``stale-if-error`` in the request is read as replacing the response's for that
+    request: RFC 5861 section 4 scopes it to the request, the precedence is this
+    library's reading. ``expires`` and ``date`` work as in ``freshness_lifetime``, so
+    ``expires`` without ``date`` raises ``ValueError``.
+
+    >>> from ccdirectives import parse
+    >>> response = parse("max-age=600, stale-while-revalidate=30")
+    >>> verdict = assess(response, age=620)
+    >>> verdict.fresh, verdict.reusable, verdict.stale_while_revalidate, verdict.staleness
+    (False, False, True, 20)
+    >>> assess(response, age=620, request=parse("max-stale=60")).reusable
+    True
     """
-    if isinstance(age, bool) or not isinstance(age, int):
-        raise TypeError("age is a whole number of seconds")
-    if age < 0:
-        raise ValueError("age cannot be negative")
-    asked = request if request is not None else CacheControl()
+    # An age past 2^31 means the same as 2^31 (RFC 9111 section 1.2.2).
+    age = min(check_seconds("age", age), DELTA_MAX)
+    policy("response", response)
+    asked = CacheControl() if request is None else policy("request", request)
     lifetime = freshness_lifetime(response, shared=shared, expires=expires, date=date)
     fresh = lifetime is not None and lifetime > age
     staleness = max(0, age - (lifetime or 0))
@@ -144,16 +120,30 @@ def may_store(
     ``authorized`` is True when the request carried Authorization; ``understood_status``
     when the cache implements the caching rules of the response's status code, which is
     what ``must-understand`` asks for and what lets it override ``no-store``. A qualified
-    ``private`` still allows a shared cache to store the response without those fields.
-    Only directives are judged: method, status and freshness rules stay with the caller.
+    ``private`` (one or more field names) still allows a shared cache to store the
+    response without those fields; an empty list counts as unqualified. Only the refusals
+    are judged (``no-store``, ``private``, ``must-understand``, Authorization): the
+    method, the status and the last condition of section 3 (a lifetime, ``public`` or a
+    cacheable status) stay with the caller.
+
+    >>> from ccdirectives import parse
+    >>> may_store(parse("private, max-age=60"), shared=True), may_store(parse("private"))
+    (False, True)
+    >>> may_store(parse("max-age=60"), shared=True, authorized=True)
+    False
     """
+    policy("response", response)
+    for flag, value in (("shared", shared), ("authorized", authorized)):
+        check_bool(flag, value)
+    check_bool("understood_status", understood_status)
     if response.must_understand:
         if not understood_status:
             return False
     elif response.no_store:
         return False
     qualifier = response.get("private")
-    unqualified = not isinstance(qualifier, str) or field_names(qualifier) is None
+    # RFC 9111 section 5.2.2.7: only a list of one or more field names qualifies private.
+    unqualified = not is_a(qualifier, str) or not field_names(str.__str__(qualifier))
     if shared and response.private and unqualified:
         return False
     if shared and authorized:

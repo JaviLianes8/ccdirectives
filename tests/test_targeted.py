@@ -45,8 +45,10 @@ def test_an_empty_or_invalid_field_is_ignored(value: str) -> None:
 
 
 def test_values_that_break_a_directive_rule_are_left_out() -> None:
-    cc = parse_targeted('max-age=1.5, s-maxage="60", stale-if-error=-1, public=?0, x=:AQID:')
+    cc = parse_targeted("max-age=1.5, stale-if-error=-1, public=?0, x=:AQID:")
     assert cc is not None and len(cc) == 0
+    # s-maxage restricts a shared cache, so a bad value keeps it bare instead.
+    assert parse_targeted('s-maxage="60"') == CacheControl({"s-maxage": True})
     cc = parse_targeted('max-age, must-understand=1, public="yes", y=@1, z=%"a", w=(1 2)')
     assert cc is not None and len(cc) == 0
 
@@ -105,7 +107,7 @@ def test_build_targeted_round_trips() -> None:
         ({"x!": True}, "not a structured field key"),
         ({"9x": True}, "not a structured field key"),
         ({"max-age": True}, "needs delta-seconds"),
-        ({"x": 10**16}, "at most 15 digits"),
+        ({"x": 10**16}, "more than 15 digits"),
         ({"x": "a\tb"}, "visible ASCII"),
     ],
 )

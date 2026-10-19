@@ -57,15 +57,15 @@ def test_digit_strings_are_delta_seconds_everywhere() -> None:
     assert build_targeted(huge) == f"max-age={DELTA_MAX}"
 
 
-def test_an_empty_private_list_is_qualified() -> None:
-    assert may_store(parse('private=""'), shared=True)
+def test_an_empty_private_list_is_unqualified() -> None:
+    assert not may_store(parse('private=""'), shared=True)
     assert not may_store(parse('private="a b"'), shared=True)
 
 
 def test_arguments_of_the_wrong_type_are_refused() -> None:
-    with pytest.raises(TypeError, match="whole number"):
+    with pytest.raises(TypeError, match="age must be an int"):
         assess(parse("max-age=5"), age=True)
-    with pytest.raises(TypeError, match="whole number"):
+    with pytest.raises(TypeError, match="age must be an int"):
         assess(parse("max-age=5"), age=4.5)  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="age_value"):
         current_age(date_value=0, request_time=0, response_time=0, now=0, age_value=-50)

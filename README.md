@@ -1,7 +1,12 @@
 # ccdirectives
 
+[![Lianes8 Certified](https://lianes8studio.com/certified/lianes8-certified-badge.svg)](https://lianes8studio.com/certified)
+
 Parse, validate and build the HTTP `Cache-Control` header (RFC 9111) and targeted fields
 such as `CDN-Cache-Control` (RFC 9213), and decide freshness, typed and zero-dependency.
+
+The [guide](https://github.com/JaviLianes8/ccdirectives/blob/main/GUIDE.md) is the full reference (every rule, error and option) and
+the [changelog](https://github.com/JaviLianes8/ccdirectives/blob/main/CHANGELOG.md) lists what changed in each release.
 
 ## Install
 
@@ -40,7 +45,8 @@ print(parse("max-stale").max_stale, parse(["max-age=60", "public"]).public)
 The default parser never raises on content: what it cannot read is skipped, and a broken
 quote cannot hide the directives after it. Strict mode validates instead, with the rules
 of a request or a response when you pass `context`. It holds a header to what a recipient
-must accept, so `max-age="60"` passes although a sender should not write it:
+must accept, so `max-age="60"` passes although a sender should not write it; it also
+refuses a repeated directive and an argument on `immutable`:
 
 ```python
 from ccdirectives import CacheControlError, parse
@@ -118,7 +124,7 @@ redirect chain), and prints the chosen field, its directives and the freshness v
 JSON. From a head it takes the age from `Age` and, when `Cache-Control` applies, the
 lifetime fallback from `Expires` and `Date`. `--target` sets the target list; it defaults
 to `CDN-Cache-Control` with `--shared`. The exit status is 1 for a value `--strict`
-rejects and 2 for a usage error.
+rejects or an output that closes early, 2 for a usage error and 130 when interrupted.
 
 ## API
 
@@ -144,15 +150,19 @@ rejects and 2 for a usage error.
 ## Why
 
 Every HTTP client, server and cache has to read `Cache-Control`, yet the parsers that
-exist are framework-bound: `werkzeug.http.parse_cache_control_header` ties you to Werkzeug
-and `webob.cachecontrol` to WebOb, while packages such as `CacheControl` and `hishel` are
-full cache transports, not directive codecs. None of them reads `CDN-Cache-Control` as the
-structured field it is. This library is the codec and the freshness arithmetic: a typed
-structure in, a correct header out, and nothing else to install.
+exist come with something bigger: `werkzeug.http.parse_cache_control_header` and
+`webob.cachecontrol` belong to those frameworks, and `CacheControl` and `hishel` are
+caching layers for requests and httpx whose parsers serve their own transports
+(`CacheControl` splits the value at every comma, so a quoted field list is not read as
+one). None of them reads `CDN-Cache-Control` (checked in Werkzeug 3.1.9, WebOb 1.8.11,
+CacheControl 0.14.4 and hishel 1.4.0). This library is the codec and the freshness
+arithmetic: a typed structure in, a correct header out, strict validation with offsets
+when you want it, and nothing else to install. Where it answers differently from those
+libraries, the [guide](https://github.com/JaviLianes8/ccdirectives/blob/main/GUIDE.md#compared-with-other-libraries) says so.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](https://github.com/JaviLianes8/ccdirectives/blob/main/LICENSE).
 
 ## Links
 

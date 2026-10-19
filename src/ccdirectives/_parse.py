@@ -5,15 +5,18 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Literal
 
+from ._access import DirectiveValue
 from ._chars import ascii_lower, delta_seconds, field_names
+from ._checks import check_bool, is_a, plain_str, shown
 from ._errors import CacheControlError
-from ._model import CacheControl, DirectiveValue
+from ._model import CacheControl
 from ._registry import DELTA_DIRECTIVES, argument_rule
 from ._scan import Item, scan
 
 Context = Literal["request", "response"]
 
 _UNSAFE = {0x00: " ", 0x0A: " ", 0x0D: " "}
+_CONTEXTS = ("request", "response")
 
 
 def parse(
@@ -30,10 +33,25 @@ def parse(
     registered name of the other direction is then treated as an extension. Strict mode
     checks what a recipient must accept, so the quoted form of delta-seconds and the token
     form of a field list pass (RFC 9111 section 5.2). Several lines are joined with ", "
-    and error offsets point into that joined value.
+    and error offsets point into that joined value. ``TypeError`` is raised for bytes, a
+    header that is not iterable and a line that is not a str; ``ValueError`` for an
+    unknown ``context``, in lenient mode too.
+
+    >>> cc = parse('max-age=600, no-cache="Set-Cookie", MAX-AGE=5')
+    >>> cc.max_age, cc.no_cache_fields, sorted(cc.duplicates)
+    (600, ('set-cookie',), ['max-age'])
+    >>> parse(["max-age=60", "x-ext"]).extensions()
+    ('x-ext',)
+    >>> parse("max-age=60, no-store=1", strict=True, context="response")
+    Traceback (most recent call last):
+    ...
+    ccdirectives.CacheControlError: 'no-store' takes no argument at offset 12
     """
-    if context not in (None, "request", "response"):
-        raise ValueError(f"context must be 'request', 'response' or None, not {context!r}")
+    check_bool("strict", strict)
+    if context is not None and not (is_a(context, str) and str.__str__(context) in _CONTEXTS):
+        raise ValueError("context must be 'request', 'response' or None")
+    if context is not None:
+        context = "request" if str.__str__(context) == "request" else "response"
     text = _join(header)
     if strict:
         _refuse_controls(text)
@@ -46,7 +64,7 @@ def parse(
         name = ascii_lower(item.name)
         if name in directives:
             if strict:
-                raise CacheControlError(f"repeated directive {name!r}", item.offset)
+                raise CacheControlError(f"repeated directive {shown(name)}", item.offset)
             duplicates.add(name)
             continue
         if strict:
@@ -56,14 +74,13 @@ def parse(
 
 
 def _join(header: str | Iterable[str]) -> str:
-    if isinstance(header, str):
-        return header
-    if isinstance(header, (bytes, bytearray)):
+    if is_a(header, str):
+        return str.__str__(header)
+    if is_a(header, (bytes, bytearray, memoryview)):
         raise TypeError("decode the header value to str first (ISO-8859-1 keeps every octet)")
-    lines = list(header)
-    for line in lines:
-        if not isinstance(line, str):
-            raise TypeError(f"field lines must be str, not {type(line).__name__}")
+    if not issubclass(type(header), Iterable):
+        raise TypeError("header must be str or an iterable of str")
+    lines = [plain_str("field lines", line) for line in header]
     # RFC 9110 section 5.3: field lines combine into one value separated by commas.
     return ", ".join(lines)
 
@@ -90,10 +107,10 @@ def _check(name: str, item: Item, context: Context | None) -> None:
     value = item.value
     # RFC 8246 says immutable takes no argument; readers ignore one, a validator reports it.
     if rule in ("none", "ignored") and value is not None:
-        raise CacheControlError(f"{name!r} takes no argument", item.offset)
+        raise CacheControlError(f"{shown(name)} takes no argument", item.offset)
     if rule == "delta" and value is None:
-        raise CacheControlError(f"{name!r} needs delta-seconds", item.offset)
+        raise CacheControlError(f"{shown(name)} needs delta-seconds", item.offset)
     if rule in ("delta", "optional-delta") and value is not None and delta_seconds(value) is None:
-        raise CacheControlError(f"{name!r} argument is not delta-seconds", item.offset)
+        raise CacheControlError(f"{shown(name)} argument is not delta-seconds", item.offset)
     if rule == "fields" and value is not None and field_names(value) is None:
-        raise CacheControlError(f"{name!r} argument is not a list of field names", item.offset)
+        raise CacheControlError(f"{shown(name)} argument is not a list of field names", item.offset)

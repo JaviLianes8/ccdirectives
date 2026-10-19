@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import re
-import shutil
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -32,6 +30,8 @@ CacheControl({"max-age": 1.5})
 assess(CacheControl(), 1)
 parse(["max-age=1", "public"], strict=True, context="request")
 select([("Cache-Control", "no-store")])
+CacheControl().extensions("both")
+select([["CDN-Cache-Control", "max-age=1"]], ["CDN-Cache-Control"])
 """
 
 
@@ -44,15 +44,9 @@ def mypy_output(tmp_path_factory: pytest.TempPathFactory) -> str:
     config.write_text(f"[mypy]\nmypy_path = {SRC.as_posix()}\n", encoding="utf-8")
     cache = str(folder / "cache")
     args = ["--strict", "--config-file", str(config), "--cache-dir", cache, str(target)]
-    try:
-        from mypy import api
-    except ImportError:
-        # The interpreter running pytest may lack mypy while the one on PATH has it.
-        program = shutil.which("mypy")
-        if program is None:
-            pytest.skip("mypy is not installed")
-        result = subprocess.run([program, *args], capture_output=True, text=True, check=False)
-        return result.stdout + result.stderr
+    # mypy must run in this interpreter: one from elsewhere on PATH cannot see the
+    # installed package and would report every name as Any.
+    api = pytest.importorskip("mypy.api")
     out, err, _ = api.run(args)
     return str(out) + str(err)
 
@@ -81,6 +75,7 @@ def test_misuse_is_rejected(mypy_output: str) -> None:
         (17, "arg-type"),
         (18, "dict-item"),
         (19, "call-arg"),
+        (22, "arg-type"),
     )
     for line, code in expected:
         assert re.search(rf"snippet\.py:{line}: error: .*\[{code}\]", mypy_output), mypy_output
@@ -96,3 +91,7 @@ def _revealed(output: str, line: int) -> str:
     assert match, output
     # Older mypy releases spell builtins with their module prefix.
     return match.group(1).replace("builtins.", "")
+
+
+def test_select_takes_lists_of_two_as_documented(mypy_output: str) -> None:
+    assert "snippet.py:23:" not in mypy_output, mypy_output

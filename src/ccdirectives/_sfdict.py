@@ -5,6 +5,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from ._chars import TCHAR
+from ._checks import shown, type_name
 from ._sf import (
     BareItem,
     Member,
@@ -68,9 +69,9 @@ def parse_dictionary(text: str) -> dict[str, Member]:
 
 def serialize_key(key: str) -> str:
     if not key or not (key[0].islower() or key[0] == "*") or not key.isascii():
-        raise StructuredError(f"{key!r} is not a structured field key")
+        raise StructuredError(f"{shown(key)} is not a structured field key")
     if any(not (char.islower() or char.isdigit() or char in "_-.*") for char in key):
-        raise StructuredError(f"{key!r} is not a structured field key")
+        raise StructuredError(f"{shown(key)} is not a structured field key")
     return key
 
 
@@ -91,7 +92,7 @@ def serialize_bare_item(value: BareItem) -> str:
         return str(value)
     if isinstance(value, Token):
         if not is_sf_token(value):
-            raise StructuredError(f"{value!r} is not a Token")
+            raise StructuredError(f"{shown(value)} is not a Token")
         return str(value)
     if isinstance(value, str):
         if any(not " " <= char <= "~" for char in value):
@@ -99,7 +100,7 @@ def serialize_bare_item(value: BareItem) -> str:
         return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
     if isinstance(value, Decimal):
         raise StructuredError("cache directives never hold a Decimal")
-    raise StructuredError(f"cannot serialize {type(value).__name__}")
+    raise StructuredError(f"cannot serialize {type_name(value)}")
 
 
 def serialize_dictionary(members: dict[str, BareItem]) -> str:
