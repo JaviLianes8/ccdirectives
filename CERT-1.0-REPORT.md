@@ -667,3 +667,8 @@ run against it: both fail.
 | F2 `y >= 1` as `y > 1` in `_stamp` | `test_year_0001_is_read_as_written` (both forms), `test_an_expires_in_year_0001_keeps_its_lifetime` |
 
 Disputed findings: none.
+
+Run after the fixes, clone of bbb378b on Elena's PC (CPython 3.14.2, auto:cpu turn
+elena/1, fetched sources present): `ruff format --check .`, `ruff check .`,
+`mypy --strict src tests scripts` exit 0; with `CCDIRECTIVES_E2E=1` and
+`CCDIRECTIVES_E2E_PYPI=1`, `pytest` 506 passed, exit 0. Fix commit: bbb378b.
