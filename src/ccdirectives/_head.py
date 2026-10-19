@@ -19,17 +19,20 @@ def head_fields(text: str) -> list[tuple[str, str]] | None:
     if not starts:
         return None
     fields: list[tuple[str, list[str]]] = []
+    kept = False
     for raw in lines[starts[-1] + 1 :]:
         line = raw.rstrip("\r")
         if not line:
             break
         if line[0] in " \t":
             # Parts are joined once at the end: joining on every line would be quadratic.
-            if fields:
+            # A continuation of a line that was not kept is dropped with it.
+            if kept:
                 fields[-1][1].append(line.strip(" \t"))
             continue
         name, colon, value = line.partition(":")
-        if colon and name and name == name.strip():
+        kept = bool(colon and name and name == name.strip())
+        if kept:
             fields.append((name, [value.strip(" \t")]))
     return [(name, " ".join(part for part in parts if part)) for name, parts in fields]
 

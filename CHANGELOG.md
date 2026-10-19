@@ -6,7 +6,7 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-## [1.0.0] - 2026-10-18
+## [1.0.0] - 2026-10-19
 
 The public API is now stable: the seventeen names in `__all__`, their signatures and
 defaults, the error types and the command line options are kept for the 1.x series.
@@ -89,6 +89,8 @@ Fixed and three changes listed under Changed: ages and lifetimes are capped at
   `Expires` or `Date` with a year or a time zone offset too large for a date. Such a
   value does not parse, so `Expires` means already expired (RFC 9111 section 5.3) and
   `Date` is replaced by the current time.
+- The command line drops the continuation lines of a response head field it does not
+  read (a name with whitespace before the colon); they were added to the field above it.
 
 ## [0.2.0] - 2026-10-17
 

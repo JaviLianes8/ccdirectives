@@ -146,7 +146,10 @@ reads standard input as octets (ISO-8859-1): a response head (the last one of a 
 dump) or a bare value. From a head it takes `Age`, and `Expires` and `Date` when
 `Cache-Control` applies; an `Expires` that does not parse means already expired, and a
 `Date` that does not parse is replaced by the current time (a year or an offset no date
-can hold does not parse). On POSIX an argument is read as the octets it was given, like
+can hold does not parse; nor does a date without a time zone). Field names compare
+case-insensitively, the head ends at the first empty line, folded lines join their field
+with a space, and a line whose name has whitespace before the colon is skipped together
+with its folded lines. On POSIX an argument is read as the octets it was given, like
 standard input. `--strict` checks a response head with the response rules; a VALUE or a
 bare value on standard input has no known direction, so it is checked with the more
 permissive rule of the two (a request directive with an argument it never takes, such as
