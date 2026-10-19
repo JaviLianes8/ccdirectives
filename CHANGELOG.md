@@ -122,6 +122,9 @@ Fixed and three changes listed under Changed: ages and lifetimes are capped at
   replaced by the current time.
 - The RFC 850 50-year rule compares whole instants, not years: with the current time
   2026-10-19, `31-Dec-76` is more than 50 years ahead and is now 1976, not 2076.
+- The RFC 850 year is chosen among the years that have the day: read in 2060,
+  `29-Feb-00` is 2000-02-29; it was invalid because 2100 has no 29 February, so such an
+  `Expires` was read as already expired and such a `Date` replaced by the current time.
 - The command line drops the continuation lines of a response head field it does not
   read (a name with whitespace before the colon); they were added to the field above it.
 

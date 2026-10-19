@@ -25,7 +25,8 @@ def http_date(value: str | None, now: float | None = None) -> float | None:
     any case: a date in another zone is invalid, as RFC 9111 section 4.2 asks for
     expiration. An rfc850 two-digit year gives the latest instant with those digits that
     is at most 50 years after ``now`` (the current time by default): an instant more than
-    50 years ahead is moved 100 years back, as RFC 9110 section 5.6.7 requires.
+    50 years ahead is moved 100 years back, as RFC 9110 section 5.6.7 requires. Only a
+    year that has the day counts: 29 February takes the latest such leap year.
     """
     if value is None:
         return None
@@ -36,7 +37,8 @@ def http_date(value: str | None, now: float | None = None) -> float | None:
     rfc850 = _RFC850.fullmatch(value)
     if rfc850:
         day, d, month, yy, *clock = rfc850.groups()
-        return _stamp(_day(day, _LONG_DAYS), _centuries(int(yy), now), month, d, clock, now)
+        years = _centuries(int(yy), now)
+        return _stamp(_day(day, _LONG_DAYS), years, month, d, clock, _limit(now))
     asctime = _ASCTIME.fullmatch(value)
     if asctime:
         day, month, d, *clock, year = asctime.groups()
@@ -50,10 +52,11 @@ def _day(name: str, names: tuple[str, ...]) -> bool:
 
 
 def _centuries(two_digits: int, now: float | None) -> list[int]:
-    # The candidate years with those digits, latest first, around the current century.
+    # The candidate years with those digits, latest first. Six centuries always hold one that
+    # is not ahead of the limit and, from there, a leap year for 29 February.
     current = time.gmtime(time.time() if now is None else now).tm_year
     year = current - current % 100 + two_digits + 100
-    return [year, year - 100, year - 200]
+    return [year - 100 * back for back in range(6)]
 
 
 def _limit(now: float | None) -> tuple[int, ...]:
@@ -68,7 +71,7 @@ def _stamp(
     month: str,
     day: str,
     clock: list[str],
-    now: float | None = None,
+    limit: tuple[int, ...] | None = None,
 ) -> float | None:
     if not ok or month.lower() not in _MONTHS:
         return None
@@ -77,11 +80,12 @@ def _stamp(
     # Second 60 is a leap second, which the grammar allows and the epoch count skips.
     if hour > 23 or minute > 59 or second > 60:
         return None
-    moment = (number, int(day), hour, minute, second)
-    if len(years) > 1:
-        limit = _limit(now)
-        years = [next(year for year in years if (year, *moment) <= limit)]
-    year = years[0]
-    if year < 1 or not 1 <= int(day) <= calendar.monthrange(year, number)[1]:
+    # A year is a candidate only when it has the day: 29 February needs a leap year.
+    years = [y for y in years if y >= 1 and 1 <= int(day) <= calendar.monthrange(y, number)[1]]
+    if limit is not None:
+        # The latest instant not more than 50 years ahead; a later one is a century earlier.
+        years = [y for y in years if (y, number, int(day), hour, minute, second) <= limit]
+    if not years:
         return None
+    year = years[0]
     return float(calendar.timegm((year, number, int(day), hour, minute, second, 0, 0, 0)))

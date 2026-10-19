@@ -167,7 +167,8 @@ of RFC 9110 section 5.6.7, all as UTC: IMF-fixdate and RFC 850 dates must say `G
 date in another zone is invalid, as RFC 9111 section 4.2 asks for expiration), a
 four-digit year is read as written, and a two-digit RFC 850 year gives the latest instant
 with those digits that is at most 50 years after the current time (one more than 50
-years ahead is moved 100 years back). Day and month names and `GMT` ignore case (ASCII
+years ahead is moved 100 years back, and only a year that has the day counts, so
+`29-Feb-00` read in 2060 is 2000-02-29, not the missing 2100-02-29). Day and month names and `GMT` ignore case (ASCII
 only); the day name must be a real one, long in RFC 850 dates and short in the others, but
 is not checked against the date. Second 60 (a leap second) is read as the next second. An `Expires` that does not parse means
 already expired, and a `Date` that does not parse is replaced by the current time. Field names compare
