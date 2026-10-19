@@ -64,7 +64,8 @@ Fixed and three changes listed under Changed: ages and lifetimes are capped at
   is built (so it is not counted as a duplicate either) and assigning `False` removes the
   name, so `in`, `len`, iteration, `keys`, `dict(cc)`, `extensions()` and equality agree
   with `has()`, the properties and `build`. A `False` placed directly in `directives` is
-  skipped by `build`, `build_targeted` and equality.
+  skipped by `build`, `build_targeted` and equality and is absent to `has()` and the
+  properties, while `in`, `len`, iteration, `dict(cc)` and `extensions()` still see it.
 - `build` and `build_targeted` raise `CacheControlError` for a number on `no-cache` or
   `private`: the structure read `private=5` as bare `private`, while the written
   `private=5` reads as a list naming field `5`, which loosened what a shared cache may
@@ -113,6 +114,14 @@ Fixed and three changes listed under Changed: ages and lifetimes are capped at
   9111 section 5.1 asks; it was read as 0, so a stale response was reported fresh. Only
   spaces and tabs around the value are stripped, so `Age` with a no-break space or another
   control character before the digits is invalid (0).
+- The command line reads every `Age` line as one list and skips its empty members, as
+  RFC 9110 section 5.6.1.2 asks: `Age: , 100`, or an empty `Age` line before `Age: 100`,
+  was read as 0, so a stale response was reported fresh.
+- HTTP dates accept `GMT` in any case (ASCII only), as RFC 9111 section 4.2 asks of a
+  cache; an `Expires` ending in `gmt` was read as already expired and such a `Date`
+  replaced by the current time.
+- The RFC 850 50-year rule compares whole instants, not years: with the current time
+  2026-10-19, `31-Dec-76` is more than 50 years ahead and is now 1976, not 2076.
 - The command line drops the continuation lines of a response head field it does not
   read (a name with whitespace before the colon); they were added to the field above it.
 

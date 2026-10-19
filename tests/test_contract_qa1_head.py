@@ -102,7 +102,7 @@ def test_a_head_with_rfc850_years_past_2068(monkeypatch: pytest.MonkeyPatch) -> 
 
 def test_a_list_age_uses_its_first_member(monkeypatch: pytest.MonkeyPatch) -> None:
     assert age_of([("Age", "100, 5")]) == 100 and age_of([("Age", " 7 ,x")]) == 7
-    assert age_of([("Age", "x, 5")]) == 0 and age_of([("Age", ", 5")]) == 0
+    assert age_of([("Age", "x, 5")]) == 0 and age_of([("Age", ", 5")]) == 5
     report = _run(monkeypatch, "Cache-Control: max-age=60\r\nAge: 100, 5\r\n")
     assert (report["age"], report["fresh"], report["reusable"]) == (100, False, False)
 

@@ -566,3 +566,41 @@ turn elena/2, fetched sources present): `ruff format --check .`, `ruff check .`,
 `mypy --strict src tests scripts` exit 0; `pytest` 428 passed, 2 skipped (the opt-in
 end-to-end modules), exit 0; with `CCDIRECTIVES_E2E=1` and `CCDIRECTIVES_E2E_PYPI=1` the
 wheel and upgrade modules passed, exit 0. Fix commit: 9cc83ff.
+
+## QA lenses (item 19), round 2 at 6d12c6b
+
+Three lenses reported findings (a: API and docs, b: correctness and ground truth, e:
+contract strength). Each behaviour finding first got a contract in
+`tests/test_contract_qa2.py` that failed on 6d12c6b, then the fix; the surviving mutants
+got contracts that pass on the code and fail on the mutant. Behaviour changes are in
+CHANGELOG 1.0.0 (Fixed).
+
+| Finding | Fix |
+| --- | --- |
+| a-F6 GUIDE said `has()` is true for any stored value | GUIDE restored to "any value but `False`" and now lists which operations treat a `False` placed directly in `directives` as absent (`build`, `build_targeted`, equality, `has()`, properties) and which still see it (`in`, `len`, iteration, `keys`, `values`, `items`, `get`, `dict(cc)`, `extensions()`); CHANGELOG says the same; contract `test_a_false_set_directly_is_stored_but_not_present` |
+| b-N1 empty `Age` member read as 0 | all `Age` lines form one list, empty and whitespace-only members are skipped, the first other member is used; `Age: , 100` and an empty `Age` line before `Age: 100` give 100 (stale) |
+| b-N2 `GMT` matched case-sensitively | `GMT` matches in any ASCII case in IMF-fixdate and rfc850-date |
+| b-N3 50-year rule compared years | candidate instants are compared with now plus 50 calendar years; `31-Dec-76` and `19-Oct-76 12:00:01` read at 2026-10-19T12:00Z are 1976; docstring and GUIDE updated |
+| e-D02, D05, D06, D11, D14, D16, D17, D18, e-M02 surviving mutants | contracts for a non-GMT rfc850 zone, unknown day names, short day names in rfc850, day 00, second 60, upper-case names in all three formats, trailing or leading text, a two-digit asctime year, and a `False` repeat of a present name |
+
+Each reported mutant (and the N1, N2, N3 fixes reverted) was applied one at a time to a
+copy of `src` and the suite run against it: every one fails, first failing test as
+listed.
+
+| Mutant | First failing test |
+| --- | --- |
+| D02 rfc850 zone `[A-Za-z]+` | `test_malformed_dates_do_not_parse[Sunday, 06-Nov-94 08:49:37 EST]` |
+| D05 `_day` always True | `test_malformed_dates_do_not_parse[Xyz, 06 Nov 1994 08:49:37 GMT]` |
+| D06 rfc850 takes short day names | `test_malformed_dates_do_not_parse[Sun, 06-Nov-94 08:49:37 GMT]` |
+| D11 day range from 0 | `test_malformed_dates_do_not_parse[Sun, 00 Nov 1994 08:49:37 GMT]` |
+| D14 second > 59 refused | `test_second_sixty_is_the_next_second` |
+| D16 IMF names `[A-Z][a-z]+` | `test_names_and_gmt_ignore_case[SUN, 06 NOV 1994 08:49:37 GMT]` |
+| D17 `_IMF.match` | `test_malformed_dates_do_not_parse[Sun, 06 Nov 1994 08:49:37 GMTX]` |
+| D18 asctime year `[0-9]{2,4}` | `test_malformed_dates_do_not_parse[Sun Nov  6 08:49:37 94]` |
+| M02 `False` skip after the duplicate check | `test_a_false_repeat_of_a_present_name_is_not_a_duplicate` |
+| N1 empty Age members kept | `test_a_list_age_uses_its_first_member` |
+| N1 only the first Age line read | `test_age_lines_form_one_list` |
+| N2 `GMT` case-sensitive | `test_names_and_gmt_ignore_case[Sun, 06 Nov 1994 08:49:37 gmt]` |
+| N3 years compared, not instants | `test_the_fifty_year_rule_compares_instants[Thursday, 31-Dec-76 00:00:00 GMT-1976]` |
+
+Disputed findings: none.

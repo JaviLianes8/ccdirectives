@@ -44,10 +44,13 @@ def field(fields: list[tuple[str, str]], name: str) -> str | None:
 def age_of(fields: list[tuple[str, str]]) -> int:
     """The Age field as delta-seconds, 0 when absent or invalid (RFC 9111 section 5.1).
 
-    Of a list-based value the first member counts, as section 5.1 asks of a cache; only
-    spaces and tabs around it are optional whitespace.
+    All Age lines form one list (RFC 9110 section 5.3), whose empty members do not count
+    (section 5.6.1.2); of the rest the first member counts, as RFC 9111 section 5.1 asks
+    of a cache. Only spaces and tabs around a member are optional whitespace.
     """
-    value = field(fields, "Age")
-    if value is None:
+    wanted = [value for name, value in fields if ascii_lower(name) == "age"]
+    members = (part.strip(" 	") for value in wanted for part in value.split(","))
+    first = next((member for member in members if member), None)
+    if first is None:
         return 0
-    return delta_seconds(value.partition(",")[0].strip(" \t")) or 0
+    return delta_seconds(first) or 0

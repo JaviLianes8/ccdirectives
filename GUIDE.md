@@ -61,8 +61,10 @@ every name, keeps the first of two names that fold together and adds it to
 `duplicates`, and stores plain `int`, `str` and `bool` values (subclasses are converted, so
 their methods cannot change what `build` writes). `False` means absent: construction
 leaves such a name out (it is not an occurrence, so it is never a duplicate), assigning
-`False` removes the name, and a `False` placed directly in `directives` is skipped by
-`build`, `build_targeted` and equality. Two structures
+`False` removes the name. A `False` placed directly in `directives` is stored, but it
+still means absent to `build`, `build_targeted`, equality, `has()` and the properties;
+`in`, `len`, iteration, `keys`, `values`, `items`, `get`, `dict(cc)` and `extensions()`
+read the stored dict and still see it. Two structures
 are equal when they hold the same names, values of the same type and duplicates, in any
 order: unlike in a `dict`, `0` and `False` (`max-age=0` against no `max-age`) and `1` and
 `True` differ. A structure is never equal to an object of another type, and comparing one
@@ -70,7 +72,7 @@ whose `directives` were edited to hold a value of another type raises `TypeError
 
 - Item access, `in`, `len`, iteration, `get`, `keys`, `values`, `items`, assignment and
   `del` ignore case; `dict(cc)` copies the directives.
-- `has(name)` is true for any stored value; `seconds(name)` reads delta-seconds.
+- `has(name)` is true for any stored value but `False`; `seconds(name)` reads delta-seconds.
 - `extensions(context=None)` lists the names outside the registry, or outside the request
   or response set.
 - Properties: `max_age`, `s_maxage`, `min_fresh`, `max_stale`, `stale_while_revalidate`,
@@ -157,14 +159,17 @@ must be `bool`. `response` and `request` must be `CacheControl` (`TypeError`).
 `ccdirectives [--strict] [--shared] [--age SECONDS] [--target FIELD]... [VALUE]` prints
 the chosen field, its directives and the verdict as JSON (ASCII only). Without VALUE it
 reads standard input as octets (ISO-8859-1): a response head (the last one of a `curl -sI`
-dump) or a bare value. From a head it takes `Age` (the first member of a list, as RFC
-9111 section 5.1 asks; spaces and tabs around it are the only whitespace allowed), and
+dump) or a bare value. From a head it takes `Age` (all `Age` lines form one list, empty
+members do not count, and the first other member is used, as RFC 9111 section 5.1 asks;
+spaces and tabs around it are the only whitespace allowed), and
 `Expires` and `Date` when `Cache-Control` applies. Dates are read in the three formats
 of RFC 9110 section 5.6.7, all as UTC: IMF-fixdate and RFC 850 dates must say `GMT` (a
 date in another zone is invalid, as RFC 9111 section 4.2 asks for expiration), a
-four-digit year is read as written, and a two-digit RFC 850 year is the latest year with
-those digits at most 50 years ahead of the current year. Day and month names ignore case;
-the day name is not checked against the date. An `Expires` that does not parse means
+four-digit year is read as written, and a two-digit RFC 850 year gives the latest instant
+with those digits that is at most 50 years after the current time (one more than 50
+years ahead is moved 100 years back). Day and month names and `GMT` ignore case (ASCII
+only); the day name must be a real one, long in RFC 850 dates and short in the others, but
+is not checked against the date. Second 60 (a leap second) is read as the next second. An `Expires` that does not parse means
 already expired, and a `Date` that does not parse is replaced by the current time. Field names compare
 case-insensitively, the head ends at the first empty line, folded lines join their field
 with a space, and a line whose name has whitespace before the colon is skipped together
