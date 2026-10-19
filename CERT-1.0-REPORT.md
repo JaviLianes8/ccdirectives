@@ -751,3 +751,29 @@ elena/1, fetched sources present, pytest basetemp outside the clone): `ruff form
 --check .`, `ruff check .`, `mypy --strict src tests scripts` exit 0; with
 `CCDIRECTIVES_E2E=1` and `CCDIRECTIVES_E2E_PYPI=1`, `pytest` 534 passed, exit 0. Fix
 commit: 278b0d6.
+
+## QA lenses (item 19), round 8 at fb6f492
+
+One lens reported a finding (e: contract strength), a surviving mutant with no behaviour
+bug: `age_of` already reads only a field whose name is exactly `Age` (compared without
+case), so it got contracts that pass on the code and fail on the mutant. No behaviour
+changed, so the CHANGELOG is unchanged.
+
+| Finding | Fix |
+| --- | --- |
+| e-F4-P10 `age_of` could read any field whose name contains `age` | `tests/test_contract_qa8.py` checks that `age_of` gives 0 for the fields `X-Age`, `Age-Hint`, `X-Cache-Age`, `Ages`, `Page` and `Image-Age`, reads the real `Age` field placed before or after each of them, matches `AGE`, `age` and `aGe` next to `X-Age`, and that the CLI reports `"age": 0` and `"fresh": true` for a head with `X-Cache-Age: 500` and `Cache-Control: max-age=60` |
+
+The mutant was applied alone to a copy of the tree and the new contract file run
+against it: all sixteen cases fail, and all sixteen pass on the code.
+
+| Mutant | Failing tests |
+| --- | --- |
+| P10 `ascii_lower(name) == "age"` as `"age" in ascii_lower(name)` in `age_of` | `test_a_field_whose_name_only_contains_age_is_ignored` (all six), `test_the_real_age_field_is_read_next_to_a_lookalike` (all six), `test_the_age_field_name_is_case_insensitive` (all three), `test_a_cache_age_field_does_not_change_the_reported_age` |
+
+Disputed findings: none.
+
+Run after the fixes, clone of d116b40 on Elena's PC (CPython 3.14.2, auto:cpu turn
+elena/1, fetched sources present, pytest basetemp inside the clone): `ruff format
+--check .`, `ruff check .`, `mypy --strict src tests scripts` exit 0; with
+`CCDIRECTIVES_E2E=1` and `CCDIRECTIVES_E2E_PYPI=1`, `pytest` 550 passed, exit 0. Fix
+commit: d116b40.
