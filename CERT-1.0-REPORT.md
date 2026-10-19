@@ -645,3 +645,25 @@ Run after the fixes, clone of aaafc96 on the laptop (CPython 3.14.6, auto:cpu tu
 portatil/1, fetched sources present): `ruff format --check .`, `ruff check .`,
 `mypy --strict src tests scripts` exit 0; with `CCDIRECTIVES_E2E=1` and
 `CCDIRECTIVES_E2E_PYPI=1`, `pytest` 501 passed, exit 0. Fix commit: aaafc96.
+
+## QA lenses (item 19), round 4 at 8a923ec
+
+One lens reported findings (e: contract strength), both surviving mutants with no
+behaviour bug: the code already keeps the documented promise, so each got a contract in
+`tests/test_contract_qa4.py` that passes on the code and fails on the mutant. No
+behaviour changed, so the CHANGELOG is unchanged.
+
+| Finding | Fix |
+| --- | --- |
+| e-F1 `_centuries` could try four centuries instead of six | contract that `Tuesday, 29-Feb-00 00:00:00 GMT` read with the clock at 2310-01-01 is 2000-02-29 (five centuries back), and the CLI with that `Date`, `Expires` one hour later and `Cache-Control: public` gives lifetime 3600 |
+| e-F2 `_stamp` could reject year 0001 (`y > 1`) | contract that `Mon, 01 Jan 0001 00:00:00 GMT` and `Mon Jan  1 00:00:00 0001` give -62135596800.0, and the CLI with `Date` and `Expires` one hour apart in year 0001 gives lifetime 3600; year 0000 stays rejected |
+
+Each mutant was applied one at a time to a copy of the tree and the date contract files
+run against it: both fail.
+
+| Mutant | Failing tests |
+| --- | --- |
+| F1 `range(6)` as `range(4)` in `_centuries` | `test_february_29_read_in_2310_is_five_centuries_back`, `test_february_29_read_in_2310_keeps_its_lifetime` |
+| F2 `y >= 1` as `y > 1` in `_stamp` | `test_year_0001_is_read_as_written` (both forms), `test_an_expires_in_year_0001_keeps_its_lifetime` |
+
+Disputed findings: none.
